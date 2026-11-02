@@ -169,6 +169,8 @@ fn desktop(port: u16) {
             }));
             let url: tauri::Url = start.parse().expect("url");
             let base_c = base.clone();
+            // Only macOS changes the builder below.
+            #[allow(unused_mut)]
             let mut b = WebviewWindowBuilder::new(app, "main", WebviewUrl::External(url))
                 .title("OpenBlocks")
                 .inner_size(1320.0, 860.0)
