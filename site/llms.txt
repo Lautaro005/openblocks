@@ -1,0 +1,29 @@
+# OpenBlocks
+
+> OpenBlocks is a free, local-first notes app for macOS, Windows and Linux. It is a Notion-style block editor on top of an Obsidian-compatible Markdown vault (a plain folder of .md files the user chooses), with databases from page properties, previews of PDF/Word/Excel/PowerPoint/CSV/images, backlinks, a graph, page history, a trash, and templates, an inline ⌘. AI box, and an AI chat whose agents read, edit and organize the vault (and read attached files) using the user's own models (Ollama, LM Studio, Claude Code, Codex, Anthropic/OpenAI-compatible/OpenRouter keys, OpenCue agents, and Gemma 4 running locally, which also reads images and scanned PDFs; EmbeddingGemma 2 finds images by meaning). Its MCP server (`openblocks mcp`) offers one vault or all of them, locally or through a Cloudflare tunnel with a secret token. Part of the AI WorkStudio family (brain, Lumina, OpenCue). Built in Rust (axum + Tauri 2) with a React + TipTap UI. License: Apache-2.0 with the Commons Clause (free to use and modify, cannot be sold).
+
+## Key facts
+
+- Install (macOS/Linux): `curl -fsSL https://raw.githubusercontent.com/Lautaro005/openblocks/main/install.sh | sh`
+- Install (Windows PowerShell): `irm https://raw.githubusercontent.com/Lautaro005/openblocks/main/install.ps1 | iex`
+- Command: `openblocks` (opens the app), `openblocks serve` (local server only), `openblocks mcp` (MCP server over stdio), `openblocks update`, `openblocks uninstall`
+- Local server: `http://127.0.0.1:47880` (loopback only; `X-OpenBlocks: 1` header required for writes)
+- Data: pages in the vault; history, trash and chats in `<vault>/.openblocks/`; settings in `~/.openblocks/settings.json`
+- Markdown: `[[wikilinks]]`, `![[embeds]]`, `> [!note]` callouts, `- [ ]` tasks, `==highlights==`, `#tags`, YAML frontmatter properties, `<details>` toggles
+- MCP tools: search_pages, read_page, list_pages, backlinks, create_page, edit_page, set_property (+ web_search, web_fetch, brain_search, lumina_search with `--with`)
+- No accounts, no telemetry, no servers of its own
+
+## Docs
+
+- [Documentation](https://lautaro005.github.io/openblocks/docs.html): install, editor, Markdown format, files, databases, links and graph, history, AI and agents, MCP, WorkStudio family, shortcuts, commands, data locations, troubleshooting
+- [Changelog](https://lautaro005.github.io/openblocks/changelog.html)
+- [Privacy](https://lautaro005.github.io/openblocks/privacy.html)
+- [README](https://github.com/Lautaro005/openblocks#readme)
+- [Security policy](https://github.com/Lautaro005/openblocks/blob/main/SECURITY.md)
+
+## Family
+
+- [AI WorkStudio](https://lautaro005.github.io/workstudio/): workspace that joins the apps and a single MCP server; OpenBlocks registers itself in `~/.workstudio/apps.json`
+- [brain](https://lautaro005.github.io/brain/): long-term memory MCP server
+- [Lumina](https://lautaro005.github.io/lumina/): meeting notes and transcripts
+- [OpenCue](https://lautaro005.github.io/opencue/): personal AI agents

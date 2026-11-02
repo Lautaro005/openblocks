@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Documentación — OpenBlocks</title>
+  <meta name="title-es" content="Documentación — OpenBlocks">
+  <meta name="title-en" content="Documentation — OpenBlocks">
+  <meta name="description" content="Cómo instalar y usar OpenBlocks: vault, editor por bloques, archivos, bases de datos, grafo, historial, IA con agentes, MCP y la familia AI WorkStudio.">
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<nav class="nav"><div class="wrap">
+  <a class="brand" href="./"><img src="assets/logo.svg" alt="">OpenBlocks</a>
+  <div class="nav-links"><a href="./#features"><span data-l="es">Funciones</span><span data-l="en">Features</span></a><a href="docs.html">Docs</a><a href="changelog.html">Changelog</a><a href="https://github.com/Lautaro005/openblocks">GitHub</a></div>
+  <div class="nav-right"><div class="lang"><button data-set-lang="es">ES</button><button data-set-lang="en">EN</button></div><a class="btn primary sm" href="./#install"><span data-l="es">Instalar</span><span data-l="en">Install</span></a></div>
+</div></nav>
+
+<div class="wrap">
+  <header class="page-head"><h1><span data-l="es">Documentación</span><span data-l="en">Documentation</span></h1><p class="muted"><span data-l="es">Todo lo que hace OpenBlocks y cómo funciona por dentro.</span><span data-l="en">Everything OpenBlocks does and how it works inside.</span></p></header>
+  <div class="docs">
+    <nav class="toc">
+      <a href="#what"><span data-l="es">Qué es</span><span data-l="en">What it is</span></a>
+      <a href="#install"><span data-l="es">Instalar</span><span data-l="en">Install</span></a>
+      <a href="#start"><span data-l="es">Primer arranque</span><span data-l="en">First run</span></a>
+      <a href="#editor"><span data-l="es">Editor</span><span data-l="en">Editor</span></a>
+      <a href="#markdown"><span data-l="es">Formato Markdown</span><span data-l="en">Markdown format</span></a>
+      <a href="#files"><span data-l="es">Archivos</span><span data-l="en">Files</span></a>
+      <a href="#databases"><span data-l="es">Bases de datos</span><span data-l="en">Databases</span></a>
+      <a href="#links"><span data-l="es">Enlaces y grafo</span><span data-l="en">Links and graph</span></a>
+      <a href="#history"><span data-l="es">Historial y papelera</span><span data-l="en">History and trash</span></a>
+      <a href="#ai"><span data-l="es">IA y agentes</span><span data-l="en">AI and agents</span></a>
+      <a href="#mcp"><span data-l="es">Servidor MCP</span><span data-l="en">MCP server</span></a>
+      <a href="#family"><span data-l="es">Familia WorkStudio</span><span data-l="en">WorkStudio family</span></a>
+      <a href="#shortcuts"><span data-l="es">Atajos</span><span data-l="en">Shortcuts</span></a>
+      <a href="#cli"><span data-l="es">Comandos</span><span data-l="en">Commands</span></a>
+      <a href="#data"><span data-l="es">Dónde están tus datos</span><span data-l="en">Where your data lives</span></a>
+      <a href="#trouble"><span data-l="es">Problemas</span><span data-l="en">Troubleshooting</span></a>
+    </nav>
+    <article class="prose">
+<div data-l="es">
+<h2 id="what">Qué es</h2>
+<p>OpenBlocks es una app de notas para macOS, Windows y Linux. Escribís en bloques, como en Notion, y cada página se guarda como un archivo Markdown en una carpeta tuya, como en Obsidian. Esa carpeta es tu <b>vault</b>: la podés abrir con cualquier editor, sincronizar como quieras o versionar con git.</p>
+<p>La app es un servidor local hecho en Rust que también abre una ventana nativa. El servidor escucha solo en <code>127.0.0.1:47880</code>; la ventana, el navegador y AI WorkStudio usan esa misma dirección.</p>
+
+<h2 id="install">Instalar</h2>
+<p>macOS y Linux:</p>
+<pre><code>curl -fsSL https://raw.githubusercontent.com/Lautaro005/openblocks/main/install.sh | sh</code></pre>
+<p>Windows (PowerShell):</p>
+<pre><code>irm https://raw.githubusercontent.com/Lautaro005/openblocks/main/install.ps1 | iex</code></pre>
+<table>
+<tr><th>Sistema</th><th>Queda instalada en</th></tr>
+<tr><td>macOS</td><td><code>/Applications/OpenBlocks.app</code> (o <code>~/Applications</code> con <code>--user</code>)</td></tr>
+<tr><td>Linux</td><td><code>~/.local/opt/openblocks</code> (AppImage) y una entrada en el menú de apps</td></tr>
+<tr><td>Windows</td><td>Programas del usuario, con acceso en el menú Inicio</td></tr>
+</table>
+<p>En los tres queda el comando <code>openblocks</code>. Opciones del instalador: <code>--build</code> (compilar desde el código, necesita Rust y Node), <code>--user</code> y <code>--uninstall</code>. También podés bajar el instalador de cada sistema desde <a href="https://github.com/Lautaro005/openblocks/releases/latest">la última versión</a>.</p>
+<blockquote>Los instaladores no están firmados todavía. En macOS el script quita la marca de cuarentena; si bajás el <code>.dmg</code> a mano, abrí la app con clic derecho → Abrir la primera vez. En Windows, SmartScreen puede pedir “Más información → Ejecutar de todas formas”.</blockquote>
+
+<h2 id="start">Primer arranque</h2>
+<ol>
+<li><b>Idioma y tema.</b> Español o inglés; tema claro, oscuro o el del sistema.</li>
+<li><b>Carpeta.</b> Elegí una carpeta vacía o una que ya tenga notas (por ejemplo tu vault de Obsidian). OpenBlocks no mueve tus archivos.</li>
+<li><b>Nombre.</b> El nombre de tu organización: queda arriba en la barra lateral.</li>
+<li><b>IA.</b> Elegí el modelo predeterminado entre los que encontró y, si tenés AI WorkStudio, si querés ver OpenBlocks adentro.</li>
+</ol>
+<p>Podés repetir el recorrido en Ajustes → General → Volver a ver el inicio, y cambiar de vault desde el nombre arriba a la izquierda.</p>
+
+<h2 id="editor">Editor</h2>
+<p>El documento es la vista: lo que escribís ya se ve con formato, sin un modo de edición aparte.</p>
+<ul>
+<li><kbd>/</kbd> abre el menú de bloques: texto, títulos, listas, tareas, citas, notas destacadas, desplegables, código, tablas, separadores, enlaces, archivos, la fecha, plantillas y la IA.</li>
+<li>Plantillas: en Ajustes → Plantillas elegís la predeterminada para cada página nueva, creás las tuyas o guardás la página abierta como plantilla.</li>
+<li>El atajo Markdown también funciona mientras escribís: <code>#</code>, <code>-</code>, <code>1.</code>, <code>[ ]</code>, <code>&gt;</code>, <code>```</code> y <code>---</code>.</li>
+<li>Pasá el mouse a la izquierda de un bloque: <b>+</b> inserta uno debajo y <b>⋮⋮</b> lo arrastra o abre su menú (convertir, duplicar, copiar como Markdown, preguntarle a la IA, borrar).</li>
+<li>Seleccioná texto para la barra de formato: negrita, cursiva, tachado, código, resaltado, enlace, convertir en otro bloque y acciones de IA.</li>
+<li>Pegar texto Markdown lo convierte en bloques. Pegar o soltar archivos los adjunta.</li>
+<li>Las <b>propiedades</b> (arriba de la página) son el frontmatter YAML: texto, número, fecha, casilla o lista (como <code>tags</code>).</li>
+<li>Se guarda solo, a los 0,7 segundos de dejar de escribir. Si otro programa cambió la página mientras tanto, OpenBlocks avisa en vez de pisarla.</li>
+</ul>
+
+<h2 id="markdown">Formato Markdown</h2>
+<p>Las páginas usan Markdown con las extensiones de Obsidian, así abren igual en las dos apps:</p>
+<table>
+<tr><th>Bloque</th><th>En el archivo</th></tr>
+<tr><td>Enlace a una página</td><td><code>[[Página]]</code>, <code>[[Página|texto]]</code>, <code>[[Página#título]]</code></td></tr>
+<tr><td>Archivo o imagen incrustados</td><td><code>![[informe.pdf]]</code>, <code>![](foto.png)</code></td></tr>
+<tr><td>Nota destacada</td><td><code>&gt; [!warning] Título</code></td></tr>
+<tr><td>Desplegable</td><td><code>&lt;details&gt;&lt;summary&gt;…&lt;/summary&gt;…&lt;/details&gt;</code></td></tr>
+<tr><td>Tarea</td><td><code>- [ ]</code> y <code>- [x]</code></td></tr>
+<tr><td>Resaltado</td><td><code>==texto==</code></td></tr>
+<tr><td>Etiqueta</td><td><code>#etiqueta</code> o <code>tags:</code> en las propiedades</td></tr>
+</table>
+
+<h2 id="files">Archivos</h2>
+<p>Arrastrá archivos a una página (o usá <kbd>/</kbd> → Archivo o imagen): se copian a una carpeta <code>attachments</code> junto a la página y quedan como un bloque. Al tocarlo se abre la vista previa al costado; el botón de las esquinas la pasa a una ventana flotante que se puede mover y agrandar.</p>
+<table>
+<tr><th>Formato</th><th>Cómo se ve</th></tr>
+<tr><td>PDF</td><td>Con el visor del sistema, página por página</td></tr>
+<tr><td>Word (.docx)</td><td>Como documento: títulos, negritas, listas y tablas</td></tr>
+<tr><td>Excel (.xlsx, .xls, .ods), CSV</td><td>Como planilla, con pestañas por hoja</td></tr>
+<tr><td>PowerPoint (.pptx)</td><td>Como diapositivas con título y texto</td></tr>
+<tr><td>Imágenes, audio y video</td><td>En la página misma y al costado, con zoom</td></tr>
+<tr><td>Markdown, texto y código</td><td>Con formato o como texto</td></tr>
+</table>
+<p>Los archivos de Office se leen en tu equipo (Rust, sin internet). Arrastrar archivos a la barra lateral los agrega a esa carpeta; un <code>.md</code> se convierte en página.</p>
+
+<h2 id="databases">Bases de datos</h2>
+<p>Cualquier carpeta se puede ver como base de datos (clic derecho → Ver como base de datos). Cada página de la carpeta es una fila y cada propiedad, una columna.</p>
+<ul>
+<li><b>Tabla:</b> editá las celdas, ordená por columna, ocultá columnas con clic derecho y sumá propiedades nuevas.</li>
+<li><b>Tablero:</b> agrupado por una propiedad (por ejemplo <code>status</code>); arrastrar una tarjeta cambia el valor.</li>
+</ul>
+<p>Todo se guarda en el frontmatter de cada página, así que sigue siendo Markdown común.</p>
+
+<h2 id="links">Enlaces y grafo</h2>
+<ul>
+<li>Escribí <kbd>[[</kbd> para buscar una página y enlazarla. Si no existe, la opción “Crear” la hace.</li>
+<li>Al pie de cada página: las páginas que la enlazan y las que la mencionan sin enlace.</li>
+<li>Renombrar o mover una página actualiza todos los enlaces que apuntaban a ella.</li>
+<li>El <b>grafo</b> (<kbd>⌘G</kbd>) dibuja todo el vault; podés resaltar, ver solo los vecinos de la página o los enlaces a páginas que no existen.</li>
+<li><kbd>⌘</kbd>+clic en una <code>#etiqueta</code> abre todas las páginas que la tienen.</li>
+</ul>
+
+<h2 id="history">Historial y papelera</h2>
+<p>OpenBlocks guarda una copia de cada página cada diez minutos de edición y siempre antes de que la IA la cambie. El reloj arriba a la derecha muestra las versiones; elegí una y tocá Restaurar (la actual queda en el historial). Lo que borrás va a la papelera del vault, de donde se restaura; solo “Vaciar la papelera” borra para siempre.</p>
+
+<h2 id="ai">IA y agentes</h2>
+<p>El chat (<kbd>⌘J</kbd>) usa los modelos que ya tenés, sin cuentas nuevas:</p>
+<table>
+<tr><th>Proveedor</th><th>Cómo se usa</th></tr>
+<tr><td>Ollama, LM Studio</td><td>Se detectan solos si están abiertos. Todo queda en tu equipo.</td></tr>
+<tr><td>Claude Code, Codex</td><td>Se detectan si están instalados. Usan tu sesión y tu suscripción; reciben las herramientas del vault por MCP.</td></tr>
+<tr><td>Anthropic, OpenAI u otra API compatible, OpenRouter</td><td>Con tu clave, en Ajustes → IA.</td></tr>
+<tr><td>Agentes de OpenCue</td><td>Aparecen en el selector y trabajan dentro de OpenBlocks con su modelo, sus instrucciones y su memoria, usando las herramientas del vault. Si su modelo necesita una clave que solo tiene OpenCue, se les pregunta a través de OpenCue.</td></tr>
+</table>
+<p>Los agentes buscan, leen, crean, editan, renombran, mueven y borran páginas, archivos y carpetas, y cambian propiedades. Cada cambio aparece como una tarjeta con <b>Deshacer</b> (lo borrado va a la papelera). Si preferís que solo lean, apagá “Los agentes pueden editar” en Ajustes → IA.</p>
+<p>Con el clip (o arrastrando al chat) adjuntás archivos: PDF, Word, Excel, PowerPoint, CSV, texto o HTML. El agente los lee y, si se lo pedís, los pasa a una página o guarda el archivo en el vault.</p>
+<p><kbd>⌘.</kbd> (<kbd>Ctrl</kbd> + <kbd>.</kbd> en Windows y Linux) abre una caja debajo de la línea para decirle a la IA qué escribir o cambiar ahí, con toda la página como contexto. El atajo se cambia en Ajustes → Atajos.</p>
+<p>Contexto: la página abierta va por defecto (tocá su etiqueta para sacarla); sumá otras con <kbd>@</kbd>. Las pills <b>Web</b>, <b>brain</b> y <b>Lumina</b> agregan esas búsquedas. En el editor, seleccioná texto → IA para mejorarlo, corregirlo, acortarlo, extenderlo, resumirlo, traducirlo, sacarle las tareas o convertirlo en tabla.</p>
+
+<h2 id="mcp">Servidor MCP</h2>
+<p><code>openblocks mcp</code> expone tus vaults por stdio con las mismas herramientas que el chat: <code>search_pages</code>, <code>read_page</code>, <code>list_pages</code>, <code>backlinks</code>, <code>find_images</code>, <code>create_page</code>, <code>edit_page</code>, <code>set_property</code>, <code>create_folder</code>, <code>move</code>, <code>delete</code> y, con <code>--with web,brain,lumina</code>, <code>web_search</code>, <code>web_fetch</code>, <code>brain_search</code> y <code>lumina_search</code>.</p>
+<pre><code>claude mcp add openblocks -- openblocks mcp
+codex mcp add openblocks -- openblocks mcp
+# Cursor, Claude Desktop, Windsurf…
+{"mcpServers": {"openblocks": {"command": "openblocks", "args": ["mcp"]}}}</code></pre>
+<p>Qué vaults: sin opciones, lo que elegiste en Ajustes → Familia → MCP (el abierto o todos). <code>--all</code> ofrece todos (las herramientas reciben <code>vault</code> y hay una <code>list_vaults</code>); <code>--vault &lt;carpeta&gt;</code>, uno solo. <code>--read-only</code> saca las herramientas que cambian algo. Las ediciones por MCP también guardan historial y la app las muestra al instante.</p>
+<h3>Acceso remoto por URL</h3>
+<p>En Ajustes → Familia → <b>Acceso remoto por URL</b> el mismo servidor MCP se publica con un túnel de Cloudflare, para agentes en la nube (Claude.ai, ChatGPT, Manus…) o en otra compu. OpenBlocks sirve MCP por HTTP en <code>127.0.0.1:47890</code> y <code>cloudflared</code> lo publica: túnel rápido (<code>*.trycloudflare.com</code>, sin cuenta, la URL cambia cada vez) o un túnel de tu cuenta con tu dominio. La URL lleva un token secreto (<code>https://…/&lt;token&gt;/mcp</code>, o <code>Authorization: Bearer &lt;token&gt;</code>); sin él, todo da 404. Cambiar el token corta la URL vieja al instante; con <b>Solo lectura</b> los agentes remotos no pueden cambiar nada. Si no tenés <code>cloudflared</code>, el botón lo baja de Cloudflare y verifica su SHA256. Si el túnel se cae (la compu se durmió), se vuelve a abrir solo.</p>
+<h3>Modelos locales</h3>
+<p>En Ajustes → IA → <b>Modelos locales</b>: Gemma 4 lee el texto de imágenes y PDFs escaneados (adjuntos en el chat o en el vault) para cualquier agente, y sirve de modelo de chat sin nada más instalado; EmbeddingGemma 2 busca imágenes del vault por lo que muestran. Corren con llama.cpp. Si tenés Lumina, se usan su llama.cpp y su Gemma 4; lo que falta se baja a <code>~/.openblocks/models</code>.</p>
+
+<h2 id="family">Familia WorkStudio</h2>
+<ul>
+<li><b>AI WorkStudio:</b> en Ajustes → Familia, “Agregar a WorkStudio” escribe OpenBlocks en <code>~/.workstudio/apps.json</code>. WorkStudio lo muestra en su inicio, lo abre adentro y suma sus herramientas a su servidor MCP único como <code>openblocks__*</code>.</li>
+<li><b>brain:</b> la pill brain busca en tu memoria (<code>POST /api/search</code> de brain) y el menú ⋯ → Guardar en brain escribe la página en <code>knowledge/</code> con la herramienta <code>write_file</code> de brain.</li>
+<li><b>Lumina:</b> la pill Lumina busca en tus reuniones, transcripciones y archivos (<code>GET /api/search</code>).</li>
+<li><b>OpenCue:</b> tus agentes salen en el selector del chat; el menú ⋯ → Mandar a un agente le pasa la página. Usa <code>opencue mcp-serve</code> + <code>send_to_agent</code>; OpenCue necesita al menos dos agentes.</li>
+</ul>
+
+<h2 id="shortcuts">Atajos</h2>
+<table>
+<tr><td><kbd>⌘K</kbd></td><td>Buscar páginas y comandos</td></tr>
+<tr><td><kbd>⌘P</kbd></td><td>Ir a una página</td></tr>
+<tr><td><kbd>⌘N</kbd></td><td>Nueva página</td></tr>
+<tr><td><kbd>⌘J</kbd></td><td>Chat de IA</td></tr>
+<tr><td><kbd>⌘D</kbd></td><td>Nota del día</td></tr>
+<tr><td><kbd>⌘G</kbd></td><td>Grafo</td></tr>
+<tr><td><kbd>⌘\</kbd></td><td>Barra lateral</td></tr>
+<tr><td><kbd>⌘[</kbd> <kbd>⌘]</kbd></td><td>Atrás y adelante</td></tr>
+<tr><td><kbd>⌘,</kbd></td><td>Ajustes</td></tr>
+<tr><td><kbd>⌘⇧H</kbd></td><td>Resaltar</td></tr>
+<tr><td><kbd>⌘⌥1</kbd>–<kbd>3</kbd></td><td>Títulos</td></tr>
+</table>
+<p>En Windows y Linux, <kbd>Ctrl</kbd> en lugar de <kbd>⌘</kbd>.</p>
+
+<h2 id="cli">Comandos</h2>
+<table>
+<tr><td><code>openblocks</code></td><td>Abre la app</td></tr>
+<tr><td><code>openblocks serve [--port N] [--open]</code></td><td>Solo el servidor (para usarla en el navegador o desde WorkStudio)</td></tr>
+<tr><td><code>openblocks mcp</code></td><td>El vault como servidor MCP</td></tr>
+<tr><td><code>openblocks update</code></td><td>Instala la última versión</td></tr>
+<tr><td><code>openblocks uninstall</code></td><td>Quita la app (tus vaults quedan)</td></tr>
+<tr><td><code>openblocks --version</code></td><td>Versión</td></tr>
+</table>
+
+<h2 id="data">Dónde están tus datos</h2>
+<table>
+<tr><td>Tus páginas y archivos</td><td>En tu vault, como archivos comunes</td></tr>
+<tr><td>Historial, papelera, chats y vistas</td><td><code>&lt;vault&gt;/.openblocks/</code></td></tr>
+<tr><td>Ajustes y claves de API</td><td><code>~/.openblocks/settings.json</code> (permisos 600). <code>OPENBLOCKS_HOME</code> lo cambia.</td></tr>
+</table>
+
+<h2 id="trouble">Problemas</h2>
+<ul>
+<li><b>No aparece ningún modelo:</b> abrí Ollama o LM Studio, o instalá Claude Code o Codex, y tocá “Volver a buscar modelos” en el selector.</li>
+<li><b>El puerto 47880 está ocupado:</b> OpenBlocks usa otro libre solo. Con <code>openblocks serve --port 48000</code> elegís uno.</li>
+<li><b>“La página cambió afuera”:</b> otro programa la editó mientras escribías. Elegí “Usar la del disco” o seguí escribiendo para quedarte con tu versión (la otra queda en el historial).</li>
+<li><b>Linux sin FUSE:</b> el comando <code>openblocks</code> corre la AppImage extraída automáticamente.</li>
+</ul>
+</div>
+
+<div data-l="en">
+<h2 id="what-en">What it is</h2>
+<p>OpenBlocks is a notes app for macOS, Windows and Linux. You write in blocks, like in Notion, and every page is saved as a Markdown file in a folder of yours, like in Obsidian. That folder is your <b>vault</b>: open it with any editor, sync it however you like or version it with git.</p>
+<p>The app is a local server written in Rust that also opens a native window. The server listens only on <code>127.0.0.1:47880</code>; the window, the browser and AI WorkStudio all use that address.</p>
+<h2 id="install-en">Install</h2>
+<pre><code>curl -fsSL https://raw.githubusercontent.com/Lautaro005/openblocks/main/install.sh | sh</code></pre>
+<pre><code>irm https://raw.githubusercontent.com/Lautaro005/openblocks/main/install.ps1 | iex</code></pre>
+<p>macOS installs to <code>/Applications/OpenBlocks.app</code>, Linux to <code>~/.local/opt/openblocks</code> with a menu entry, Windows to the user's programs. You also get the <code>openblocks</code> command. Installer options: <code>--build</code>, <code>--user</code>, <code>--uninstall</code>. The installers are not code-signed yet: on macOS the script clears the quarantine flag; on Windows SmartScreen may ask for “More info → Run anyway”.</p>
+<h2 id="start-en">First run</h2>
+<p>Pick a language and theme, the vault folder (empty, or one with notes such as your Obsidian vault), its name, and your default AI model. Run it again from Settings → General.</p>
+<h2 id="editor-en">Editor</h2>
+<ul>
+<li><kbd>/</kbd> opens the block menu: text, headings, lists, tasks, quotes, callouts, toggles, code, tables, dividers, links, files, today's date, templates and AI.</li>
+<li>Templates: in Settings → Templates pick the default for every new page, create your own, or save the open page as a template.</li>
+<li>Markdown shortcuts work as you type: <code>#</code>, <code>-</code>, <code>1.</code>, <code>[ ]</code>, <code>&gt;</code>, <code>```</code>, <code>---</code>.</li>
+<li>Hover left of a block: <b>+</b> inserts one below; <b>⋮⋮</b> drags it or opens its menu.</li>
+<li>Select text for the format bar and the AI actions. Pasting Markdown turns into blocks; pasting or dropping files attaches them.</li>
+<li><b>Properties</b> at the top are the YAML frontmatter: text, number, date, checkbox or list.</li>
+<li>It saves itself 0.7 s after you stop typing, and warns instead of overwriting when another program changed the page.</li>
+</ul>
+<h2 id="markdown-en">Markdown format</h2>
+<p><code>[[Page]]</code>, <code>![[file.pdf]]</code>, <code>&gt; [!warning] Title</code>, <code>&lt;details&gt;</code>, <code>- [ ]</code>, <code>==highlight==</code>, <code>#tag</code> — the same as Obsidian.</p>
+<h2 id="files-en">Files</h2>
+<p>Drop files on a page: they are copied to an <code>attachments</code> folder next to it. Click one for the side preview, or pop it into a floating window. PDF, Word, Excel/CSV, PowerPoint, images, audio, video, Markdown and code all preview locally, with no internet.</p>
+<h2 id="databases-en">Databases</h2>
+<p>Right-click a folder → View as database. Pages are rows, properties are columns. Table (edit, sort, hide, add columns) or board (grouped by a property; drag cards to change it). Everything stays in each page's frontmatter.</p>
+<h2 id="links-en">Links and graph</h2>
+<p>Type <kbd>[[</kbd> to link a page (or create it). Each page lists backlinks and unlinked mentions. Renaming or moving a page fixes every link to it. <kbd>⌘G</kbd> opens the graph. <kbd>⌘</kbd>-click a <code>#tag</code> to list its pages.</p>
+<h2 id="history-en">History and trash</h2>
+<p>A copy every ten minutes of editing and always before an AI change. Restore any version from the clock icon. Deleted items go to the vault's trash until you empty it.</p>
+<h2 id="ai-en">AI and agents</h2>
+<p><kbd>⌘J</kbd> opens the chat. Ollama and LM Studio (local), Claude Code and Codex (your login), Anthropic / OpenAI-compatible / OpenRouter (your key) and your OpenCue agents. Agents search, read, create, edit, rename, move and delete pages, files and folders, and every change has an <b>Undo</b> card. Turn editing off in Settings → AI. Add pages with <kbd>@</kbd>, attach files (PDF, Word, Excel, PowerPoint, CSV, text) with the paperclip; the Web, brain and Lumina pills add those searches. OpenCue agents work here with their own model, instructions and memory. Select text → AI for inline actions, or press <kbd>⌘.</kbd> (<kbd>Ctrl</kbd> + <kbd>.</kbd>) to tell the AI what to write on the current line; change it in Settings → Shortcuts.</p>
+<h2 id="mcp-en">MCP server</h2>
+<pre><code>claude mcp add openblocks -- openblocks mcp
+codex mcp add openblocks -- openblocks mcp</code></pre>
+<p>Tools: <code>search_pages</code>, <code>read_page</code>, <code>list_pages</code>, <code>backlinks</code>, <code>find_images</code>, <code>create_page</code>, <code>edit_page</code>, <code>set_property</code>, <code>create_folder</code>, <code>move</code>, <code>delete</code>, plus <code>web_search</code>, <code>web_fetch</code>, <code>brain_search</code>, <code>lumina_search</code> with <code>--with</code>. Vaults: with no option, the choice in Settings → Family → MCP (the open one or all); <code>--all</code> for every vault (tools take <code>vault</code>, plus <code>list_vaults</code>), <code>--vault &lt;dir&gt;</code> for one. <code>--read-only</code> removes the tools that change anything.</p>
+<p><b>Remote access by URL</b> (Settings → Family) publishes the same server through a Cloudflare tunnel — a quick <code>*.trycloudflare.com</code> URL or your own domain — for agents in the cloud. The URL carries a secret token (<code>https://…/&lt;token&gt;/mcp</code> or <code>Authorization: Bearer</code>); without it everything answers 404. Regenerate the token to cut a URL off; read-only mode keeps remote agents from changing anything. <code>cloudflared</code> is installed from Cloudflare's release with its SHA256 checked.</p>
+<p><b>Local models</b> (Settings → AI): Gemma 4 reads images and scanned PDFs for every agent and works as a chat model on its own; EmbeddingGemma 2 finds images by what they show. They run with llama.cpp, reusing Lumina's llama.cpp and Gemma 4 when Lumina is installed.</p>
+<h2 id="family-en">WorkStudio family</h2>
+<p>Settings → Family: register OpenBlocks in AI WorkStudio (<code>~/.workstudio/apps.json</code>), search brain and Lumina from the chat, save pages to brain, and send pages to OpenCue agents.</p>
+<h2 id="cli-en">Commands</h2>
+<p><code>openblocks</code>, <code>openblocks serve [--port N] [--open]</code>, <code>openblocks mcp</code>, <code>openblocks update</code>, <code>openblocks uninstall</code>, <code>openblocks --version</code>.</p>
+<h2 id="data-en">Where your data lives</h2>
+<p>Pages and files in your vault; history, trash, chats and views in <code>&lt;vault&gt;/.openblocks/</code>; settings and API keys in <code>~/.openblocks/settings.json</code> (mode 600).</p>
+<h2 id="trouble-en">Troubleshooting</h2>
+<p>No models: open Ollama or LM Studio, or install Claude Code or Codex, then refresh the picker. Port 47880 busy: OpenBlocks picks another one, or use <code>--port</code>. “The page changed outside OpenBlocks”: another program edited it; choose which version to keep — the other stays in the history.</p>
+</div>
+    </article>
+  </div>
+</div>
+<footer><div class="wrap foot">
+  <div><a class="brand" href="./"><img src="assets/logo.svg" alt="">OpenBlocks</a></div>
+  <div><h4>Docs</h4><a href="changelog.html">Changelog</a><a href="llms.txt">llms.txt</a></div>
+  <div><h4><span data-l="es">Proyecto</span><span data-l="en">Project</span></h4><a href="https://github.com/Lautaro005/openblocks">GitHub</a><a href="privacy.html"><span data-l="es">Privacidad</span><span data-l="en">Privacy</span></a></div>
+  <div></div>
+</div></footer>
+<script src="assets/site.js"></script>
+</body>
+</html>

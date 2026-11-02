@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://lautaro005.github.io/openblocks/sitemap.xml

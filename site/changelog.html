@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Novedades — OpenBlocks</title>
+  <meta name="title-es" content="Novedades — OpenBlocks">
+  <meta name="title-en" content="Changelog — OpenBlocks">
+  <meta name="description" content="Qué cambió en cada versión de OpenBlocks.">
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<nav class="nav"><div class="wrap">
+  <a class="brand" href="./"><img src="assets/logo.svg" alt="">OpenBlocks</a>
+  <div class="nav-links"><a href="docs.html">Docs</a><a href="changelog.html">Changelog</a><a href="https://github.com/Lautaro005/openblocks">GitHub</a></div>
+  <div class="nav-right"><div class="lang"><button data-set-lang="es">ES</button><button data-set-lang="en">EN</button></div><a class="btn primary sm" href="./#install"><span data-l="es">Instalar</span><span data-l="en">Install</span></a></div>
+</div></nav>
+<div class="wrap narrow">
+  <header class="page-head"><h1><span data-l="es">Novedades</span><span data-l="en">Changelog</span></h1><p class="muted"><span data-version></span></p></header>
+  <article class="prose" id="log"><p class="muted">…</p></article>
+</div>
+<footer><div class="wrap foot"><div><a class="brand" href="./"><img src="assets/logo.svg" alt="">OpenBlocks</a></div><div></div><div></div><div></div></div></footer>
+<script src="assets/site.js"></script>
+<script>
+// Renders CHANGELOG.md (copied here by the Pages workflow; falls back to GitHub).
+(async () => {
+  const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const inline = (s) => esc(s).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/\[([^\]]+)\]\((https?:[^)]+)\)/g, '<a href="$2">$1</a>');
+  let md = "";
+  for (const url of ["CHANGELOG.md", "https://raw.githubusercontent.com/Lautaro005/openblocks/main/CHANGELOG.md"]) {
+    try { const r = await fetch(url); if (r.ok) { md = await r.text(); break; } } catch {}
+  }
+  const out = [];
+  let list = false, section = false;
+  for (const line of md.split("\n")) {
+    const close = () => { if (list) { out.push("</ul>"); list = false; } };
+    let m;
+    if ((m = /^## \[?([^\]\s]+)\]?\s*(?:[—-]\s*)?(.*)$/.exec(line))) {
+      close(); if (section) out.push("</section>");
+      out.push(`<section class="release"><h2>${esc(m[1])} <small>${esc(m[2])}</small></h2>`); section = true;
+    } else if ((m = /^### (.*)$/.exec(line))) { close(); out.push(`<h3>${inline(m[1])}</h3>`); }
+    else if ((m = /^\s*[-*] (.*)$/.exec(line))) { if (!list) { out.push("<ul>"); list = true; } out.push(`<li>${inline(m[1])}</li>`); }
+    else if (line.trim() && !line.startsWith("# ")) { close(); out.push(`<p>${inline(line)}</p>`); }
+    else close();
+  }
+  if (list) out.push("</ul>");
+  if (section) out.push("</section>");
+  document.getElementById("log").innerHTML = out.join("\n") || '<p class="muted">—</p>';
+})();
+</script>
+</body>
+</html>

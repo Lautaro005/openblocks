@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Privacidad — OpenBlocks</title>
+  <meta name="title-es" content="Privacidad — OpenBlocks">
+  <meta name="title-en" content="Privacy — OpenBlocks">
+  <meta name="description" content="Política de privacidad de OpenBlocks: sin cuentas, sin servidores, sin analítica. Qué guarda en tu equipo y cuándo se conecta a internet.">
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<nav class="nav"><div class="wrap">
+  <a class="brand" href="./"><img src="assets/logo.svg" alt="">OpenBlocks</a>
+  <div class="nav-links"><a href="docs.html">Docs</a><a href="changelog.html">Changelog</a><a href="https://github.com/Lautaro005/openblocks">GitHub</a></div>
+  <div class="nav-right"><div class="lang"><button data-set-lang="es">ES</button><button data-set-lang="en">EN</button></div></div>
+</div></nav>
+<div class="wrap narrow">
+  <header class="page-head"><h1><span data-l="es">Privacidad</span><span data-l="en">Privacy</span></h1><p class="muted"><span data-l="es">Última actualización: 2 de noviembre de 2026</span><span data-l="en">Last updated: November 2, 2026</span></p></header>
+  <article class="prose">
+<div data-l="es">
+<p><b>En corto:</b> OpenBlocks no tiene cuentas, servidores ni analítica. Tus notas quedan en tu carpeta. La app solo se conecta a internet cuando vos usás algo que lo necesita.</p>
+<h2>Qué guarda y dónde</h2>
+<table>
+<tr><th>Dato</th><th>Dónde</th></tr>
+<tr><td>Páginas, carpetas y archivos</td><td>En tu vault, la carpeta que elegiste</td></tr>
+<tr><td>Historial de versiones, papelera, conversaciones con la IA, vistas de bases de datos</td><td><code>&lt;vault&gt;/.openblocks/</code></td></tr>
+<tr><td>Ajustes, vaults recientes y claves de API</td><td><code>~/.openblocks/settings.json</code>, legible solo por tu usuario</td></tr>
+</table>
+<p>Nada de eso se envía al autor ni a terceros. Borrar esas carpetas borra los datos.</p>
+<h2>Cuándo se conecta a internet</h2>
+<ul>
+<li><b>IA con un proveedor en la nube.</b> Si elegís Claude Code, Codex, Anthropic, OpenAI, OpenRouter u otra API, lo que mandás en el chat (y la página que va como contexto) viaja a ese proveedor, bajo tu cuenta y sus términos. Con Ollama o LM Studio todo queda en tu equipo.</li>
+<li><b>Búsqueda web.</b> Solo con la pill Web encendida: las consultas van a DuckDuckGo y las páginas que el agente lee se descargan directamente.</li>
+<li><b>Modelos locales.</b> Si tocás Descargar en Ajustes → IA → Modelos locales, se bajan llama.cpp de GitHub y Gemma 4 o EmbeddingGemma 2 de Hugging Face. Después corren en tu equipo: las imágenes y PDFs que leen no salen de tu compu. Si tenés Lumina, se usan sus modelos.</li>
+<li><b>Acceso remoto por URL.</b> Apagado de fábrica. Si lo prendés, el servidor MCP se publica con un túnel de Cloudflare: los agentes que tengan la URL (con su token secreto) pueden leer y, si no está en solo lectura, cambiar tus vaults, y ese tráfico pasa por Cloudflare.</li>
+<li><b>Actualizaciones.</b> La app consulta la API pública de GitHub para saber si hay una versión nueva (se apaga en Ajustes → General).</li>
+<li><b>Familia WorkStudio.</b> brain, Lumina y OpenCue corren en tu equipo; OpenBlocks les habla por <code>127.0.0.1</code>.</li>
+</ul>
+<h2>El servidor local</h2>
+<p>OpenBlocks escucha solo en <code>127.0.0.1</code> (y el acceso remoto, si lo prendés, publica únicamente el servidor MCP con su token). Rechaza pedidos con un nombre de host ajeno y exige un encabezado propio en todo lo que modifica datos, así una página web no puede usarlo desde tu navegador.</p>
+<h2>Este sitio</h2>
+<p>El sitio es estático, sin cookies ni analítica. Está en GitHub Pages, que puede registrar datos técnicos de acceso según la política de GitHub. El sitio consulta la API pública de GitHub para mostrar la última versión.</p>
+<h2>Contacto</h2>
+<p>Preguntas o pedidos: abrí un issue en <a href="https://github.com/Lautaro005/openblocks/issues">GitHub</a>. Para temas de seguridad, seguí <a href="https://github.com/Lautaro005/openblocks/blob/main/SECURITY.md">SECURITY.md</a>.</p>
+</div>
+<div data-l="en">
+<p><b>In short:</b> OpenBlocks has no accounts, no servers and no analytics. Your notes stay in your folder. The app only goes online when you use something that needs it.</p>
+<h2>What it stores and where</h2>
+<table>
+<tr><th>Data</th><th>Where</th></tr>
+<tr><td>Pages, folders and files</td><td>In your vault, the folder you chose</td></tr>
+<tr><td>Version history, trash, AI conversations, database views</td><td><code>&lt;vault&gt;/.openblocks/</code></td></tr>
+<tr><td>Settings, recent vaults and API keys</td><td><code>~/.openblocks/settings.json</code>, readable only by your user</td></tr>
+</table>
+<p>None of it is sent to the author or to third parties. Deleting those folders deletes the data.</p>
+<h2>When it goes online</h2>
+<ul>
+<li><b>AI with a cloud provider.</b> With Claude Code, Codex, Anthropic, OpenAI, OpenRouter or another API, what you send in the chat (and the page sent as context) goes to that provider, under your account and its terms. With Ollama or LM Studio everything stays on your computer.</li>
+<li><b>Web search.</b> Only with the Web pill on: queries go to DuckDuckGo and pages the agent reads are downloaded directly.</li>
+<li><b>Local models.</b> If you press Download in Settings → AI → Local models, llama.cpp comes from GitHub and Gemma 4 or EmbeddingGemma 2 from Hugging Face. Then they run on your computer: the images and PDFs they read never leave it. If you have Lumina, its models are used.</li>
+<li><b>Remote access by URL.</b> Off by default. When you turn it on, the MCP server is published through a Cloudflare tunnel: agents with the URL (and its secret token) can read and, unless it is read-only, change your vaults, and that traffic goes through Cloudflare.</li>
+<li><b>Updates.</b> The app asks GitHub's public API whether there is a new version (turn it off in Settings → General).</li>
+<li><b>WorkStudio family.</b> brain, Lumina and OpenCue run on your computer; OpenBlocks talks to them on <code>127.0.0.1</code>.</li>
+</ul>
+<h2>The local server</h2>
+<p>OpenBlocks listens only on <code>127.0.0.1</code> (remote access, if you turn it on, publishes only the MCP server, behind its token). It rejects requests with a foreign host name and requires its own header on everything that changes data, so a web page cannot use it from your browser.</p>
+<h2>This website</h2>
+<p>The site is static, with no cookies and no analytics. It is hosted on GitHub Pages, which may log technical access data under GitHub's policy. It calls GitHub's public API to show the latest version.</p>
+<h2>Contact</h2>
+<p>Questions or requests: open an issue on <a href="https://github.com/Lautaro005/openblocks/issues">GitHub</a>. For security matters, follow <a href="https://github.com/Lautaro005/openblocks/blob/main/SECURITY.md">SECURITY.md</a>.</p>
+</div>
+  </article>
+</div>
+<footer><div class="wrap foot"><div><a class="brand" href="./"><img src="assets/logo.svg" alt="">OpenBlocks</a></div><div></div><div></div><div></div></div></footer>
+<script src="assets/site.js"></script>
+</body>
+</html>

@@ -1,0 +1,63 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  desktop:
+    name: Desktop (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macos-universal
+            os: macos-latest
+            args: --target universal-apple-darwin --bundles app,dmg
+          - name: linux-x64
+            os: ubuntu-22.04
+            args: --bundles appimage,deb,rpm
+          - name: windows-x64
+            os: windows-latest
+            args: --bundles nsis,msi
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf build-essential
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - run: npm ci
+        working-directory: apps/desktop
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ runner.os == 'macOS' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+      - uses: Swatinem/rust-cache@v2
+      - name: Build and publish
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: apps/desktop
+          tagName: v__VERSION__
+          releaseName: OpenBlocks v__VERSION__
+          releaseBody: |
+            Install from a terminal:
+
+            - macOS / Linux: `curl -fsSL https://raw.githubusercontent.com/Lautaro005/openblocks/main/install.sh | sh`
+            - Windows (PowerShell): `irm https://raw.githubusercontent.com/Lautaro005/openblocks/main/install.ps1 | iex`
+
+            Or download the installer for your system below. What's new: https://lautaro005.github.io/openblocks/changelog.html
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.args }}

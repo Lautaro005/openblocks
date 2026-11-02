@@ -1,0 +1,40 @@
+{
+  "name": "openblocks-desktop",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@phosphor-icons/react": "2.1.10",
+    "@tiptap/core": "3.32.2",
+    "@tiptap/extension-code-block-lowlight": "3.32.2",
+    "@tiptap/extension-details": "3.32.2",
+    "@tiptap/extension-highlight": "3.32.2",
+    "@tiptap/extension-image": "3.32.2",
+    "@tiptap/extension-list": "3.32.2",
+    "@tiptap/extension-table": "3.32.2",
+    "@tiptap/extensions": "3.32.2",
+    "@tiptap/pm": "3.32.2",
+    "@tiptap/react": "3.32.2",
+    "@tiptap/starter-kit": "3.32.2",
+    "@tiptap/suggestion": "3.32.2",
+    "lowlight": "3.3.0",
+    "marked": "18.1.2",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "zustand": "5.0.16"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "6.2.1",
+    "typescript": "5.9.3",
+    "vite": "8.3.5"
+  }
+}

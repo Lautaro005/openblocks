@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>OpenBlocks</title>
+    <link rel="icon" href="/logo.svg" type="image/svg+xml" />
+    <script>
+      // Apply the theme before the first paint (no white flash in dark mode).
+      try {
+        var t = localStorage.getItem("ob-theme") || "system";
+        var dark = t === "dark" || (t === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.dataset.theme = dark ? "dark" : "light";
+        var d = new URLSearchParams(location.search).get("desktop");
+        if (d) { sessionStorage.setItem("ob-desktop", d); }
+        document.documentElement.dataset.desktop = d || sessionStorage.getItem("ob-desktop") || "";
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
