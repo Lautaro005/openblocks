@@ -158,14 +158,19 @@ fn desktop(port: u16) {
         .setup(move |app| {
             let _ = &rt_keep;
             let handle = app.handle().clone();
-            openblocks_core::set_folder_picker(Box::new(move |title| {
+            openblocks_core::set_picker(Box::new(move |title, kind| {
                 use tauri_plugin_dialog::DialogExt;
-                handle
-                    .dialog()
-                    .file()
-                    .set_title(title)
-                    .blocking_pick_folder()
-                    .and_then(|p| p.into_path().ok())
+                let d = handle.dialog().file().set_title(title);
+                match kind {
+                    openblocks_core::Pick::Folder => d
+                        .blocking_pick_folder()
+                        .and_then(|p| p.into_path().ok())
+                        .map(|p| vec![p]),
+                    openblocks_core::Pick::Zips => d
+                        .add_filter("Zip", &["zip"])
+                        .blocking_pick_files()
+                        .map(|v| v.into_iter().filter_map(|p| p.into_path().ok()).collect()),
+                }
             }));
             let url: tauri::Url = start.parse().expect("url");
             let base_c = base.clone();

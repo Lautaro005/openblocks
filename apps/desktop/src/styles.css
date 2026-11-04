@@ -4052,3 +4052,138 @@ img.brand {
   background: var(--ink);
   transition: width 0.3s;
 }
+
+/* ---------- Settings → Import ---------- */
+.import-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.import-card .seg {
+  align-self: flex-start;
+}
+.import-card .set-row {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.import-steps {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.import-steps li::marker {
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.btn-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+}
+.btn-link:hover {
+  text-decoration: underline;
+}
+.import-token {
+  display: flex;
+  gap: 8px;
+}
+.import-token .input {
+  flex: 1;
+  font-family: var(--mono);
+}
+.import-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 22px 16px;
+  border: 1.5px dashed var(--line-2);
+  border-radius: 12px;
+  text-align: center;
+  color: var(--ink-3);
+  transition: border-color 0.15s, background 0.15s;
+}
+.import-drop > span:first-of-type {
+  color: var(--ink);
+  font-weight: 500;
+}
+.import-drop.over {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.import-drop .tpl-actions {
+  margin: 4px 0 0;
+}
+.import-run {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.import-phase {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+}
+.import-phase .muted {
+  font-variant-numeric: tabular-nums;
+}
+.bar.indeterminate span {
+  width: 30%;
+  animation: bar-slide 1.2s ease-in-out infinite;
+}
+@keyframes bar-slide {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(340%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bar.indeterminate span {
+    animation: none;
+    width: 100%;
+    opacity: 0.4;
+  }
+}
+.import-result {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--sunk);
+  font-size: 13.5px;
+}
+.import-result span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.import-warn summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+.import-warn ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  max-height: 160px;
+  overflow: auto;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}

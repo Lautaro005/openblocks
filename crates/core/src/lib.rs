@@ -8,6 +8,7 @@
 pub mod ai;
 pub mod family;
 pub mod http;
+pub mod import;
 pub mod localai;
 pub mod markdown;
 pub mod mcp_client;
@@ -96,20 +97,34 @@ impl AppState {
     }
 }
 
-/// A native folder picker the desktop shell can install (it shows a proper sheet). Without it the
-/// server falls back to the system's own dialog commands (`osascript`, `zenity`, PowerShell).
-type Picker = Box<dyn Fn(&str) -> Option<PathBuf> + Send + Sync>;
+/// What a native picker should let the user choose.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Pick {
+    Folder,
+    /// One or more `.zip` files.
+    Zips,
+}
+
+/// A native picker the desktop shell can install (it shows a proper sheet). Without it the server
+/// falls back to the system's own dialog commands (`osascript`, `zenity`, PowerShell).
+type Picker = Box<dyn Fn(&str, Pick) -> Option<Vec<PathBuf>> + Send + Sync>;
 static PICKER: OnceLock<Picker> = OnceLock::new();
 
-pub fn set_folder_picker(f: Picker) {
+pub fn set_picker(f: Picker) {
     let _ = PICKER.set(f);
 }
 
+pub fn pick(prompt: &str, kind: Pick) -> Option<Vec<PathBuf>> {
+    let v = match PICKER.get() {
+        Some(p) => p(prompt, kind),
+        None if kind == Pick::Folder => sys::pick_folder(prompt).map(|p| vec![p]),
+        None => sys::pick_zips(prompt),
+    };
+    v.filter(|v| !v.is_empty())
+}
+
 pub fn pick_folder(prompt: &str) -> Option<PathBuf> {
-    if let Some(p) = PICKER.get() {
-        return p(prompt);
-    }
-    sys::pick_folder(prompt)
+    pick(prompt, Pick::Folder).and_then(|v| v.into_iter().next())
 }
 
 /// Re-exported so the desktop shell does not need its own anyhow dependency.

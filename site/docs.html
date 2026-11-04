@@ -6,7 +6,7 @@
   <title>Documentación — OpenBlocks</title>
   <meta name="title-es" content="Documentación — OpenBlocks">
   <meta name="title-en" content="Documentation — OpenBlocks">
-  <meta name="description" content="Cómo instalar y usar OpenBlocks: vault, editor por bloques, archivos, bases de datos, grafo, historial, IA con agentes, MCP y la familia AI WorkStudio.">
+  <meta name="description" content="Cómo instalar y usar OpenBlocks: vault, editor por bloques, archivos, bases de datos, importar desde Notion, grafo, historial, IA con agentes, MCP y la familia AI WorkStudio.">
   <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
   <link rel="stylesheet" href="assets/site.css">
 </head>
@@ -28,6 +28,7 @@
       <a href="#markdown"><span data-l="es">Formato Markdown</span><span data-l="en">Markdown format</span></a>
       <a href="#files"><span data-l="es">Archivos</span><span data-l="en">Files</span></a>
       <a href="#databases"><span data-l="es">Bases de datos</span><span data-l="en">Databases</span></a>
+      <a href="#import"><span data-l="es">Importar desde Notion</span><span data-l="en">Import from Notion</span></a>
       <a href="#links"><span data-l="es">Enlaces y grafo</span><span data-l="en">Links and graph</span></a>
       <a href="#history"><span data-l="es">Historial y papelera</span><span data-l="en">History and trash</span></a>
       <a href="#ai"><span data-l="es">IA y agentes</span><span data-l="en">AI and agents</span></a>
@@ -56,7 +57,7 @@
 <tr><td>Windows</td><td>Programas del usuario, con acceso en el menú Inicio</td></tr>
 </table>
 <p>En los tres queda el comando <code>openblocks</code>. Opciones del instalador: <code>--build</code> (compilar desde el código, necesita Rust y Node), <code>--user</code> y <code>--uninstall</code>. También podés bajar el instalador de cada sistema desde <a href="https://github.com/Lautaro005/openblocks/releases/latest">la última versión</a>.</p>
-<blockquote>Los instaladores no están firmados todavía. En macOS el script quita la marca de cuarentena; si bajás el <code>.dmg</code> a mano, abrí la app con clic derecho → Abrir la primera vez. En Windows, SmartScreen puede pedir “Más información → Ejecutar de todas formas”.</blockquote>
+<blockquote>En macOS la app está firmada con el certificado propio de OpenBlocks, así que macOS recuerda lo que permitiste (como un vault en un USB) también después de actualizar. No está notarizada por Apple: el script quita la marca de cuarentena; si bajás el <code>.dmg</code> a mano, abrí la app con clic derecho → Abrir la primera vez. En Windows, SmartScreen puede pedir “Más información → Ejecutar de todas formas”.</blockquote>
 
 <h2 id="start">Primer arranque</h2>
 <ol>
@@ -113,6 +114,22 @@
 <li><b>Tablero:</b> agrupado por una propiedad (por ejemplo <code>status</code>); arrastrar una tarjeta cambia el valor.</li>
 </ul>
 <p>Todo se guarda en el frontmatter de cada página, así que sigue siendo Markdown común.</p>
+
+<h2 id="import">Importar desde Notion</h2>
+<p>En <b>Ajustes → Importar</b> traés un espacio de trabajo entero de Notion a una carpeta nueva del vault (<code>Notion</code>, o el nombre que elijas). En Notion no se toca nada. Hay dos caminos:</p>
+<ul>
+<li><b>Con un token (recomendado).</b> En <a href="https://www.notion.so/profile/integrations">notion.so/profile/integrations</a> creá una integración interna, en su pestaña <i>Acceso</i> elegí las páginas a traer (con las de arriba de todo viene todo lo que tienen adentro) y pegá el <i>Secreto de integración interna</i> en OpenBlocks. Trae páginas, subpáginas (también las que están dentro de un toggle o una columna), todas las filas de cada base de datos con sus propiedades y los archivos que Notion guarda. El token no se guarda; después podés borrar la integración.</li>
+<li><b>Con la exportación.</b> En Notion: Configuración → General → <i>Exportar todo el contenido del espacio de trabajo</i>, en formato <i>Markdown y CSV</i> con subpáginas. Soltá el <code>.zip</code> en OpenBlocks (o elegí varias partes juntas, o la carpeta si tu navegador lo descomprimió). No se conecta a internet.</li>
+</ul>
+<table>
+<tr><th>En Notion</th><th>En OpenBlocks</th></tr>
+<tr><td>Página con subpáginas</td><td>Una carpeta con la página adentro</td></tr>
+<tr><td>Base de datos</td><td>Una carpeta vista como base de datos: una página por fila, propiedades en el frontmatter (fechas, casillas, números, listas, relaciones como enlaces)</td></tr>
+<tr><td>Enlaces y menciones de páginas</td><td><code>[[wikilinks]]</code></td></tr>
+<tr><td>Imágenes y archivos</td><td>Embebidos (<code>![[…]]</code>) en una carpeta <code>attachments</code> o junto a la página</td></tr>
+<tr><td>Callouts, toggles, tablas, código, ecuaciones</td><td><code>&gt; [!tip]</code>, <code>&lt;details&gt;</code>, tablas Markdown, bloques de código, <code>$$…$$</code></td></tr>
+</table>
+<p>Mientras importa ves qué está copiando y podés cancelar; al final, la lista de lo que no se pudo traer (por ejemplo, una página que la integración no puede ver).</p>
 
 <h2 id="links">Enlaces y grafo</h2>
 <ul>
@@ -198,6 +215,7 @@ codex mcp add openblocks -- openblocks mcp
 <li><b>No aparece ningún modelo:</b> abrí Ollama o LM Studio, o instalá Claude Code o Codex, y tocá “Volver a buscar modelos” en el selector.</li>
 <li><b>El puerto 47880 está ocupado:</b> OpenBlocks usa otro libre solo. Con <code>openblocks serve --port 48000</code> elegís uno.</li>
 <li><b>“La página cambió afuera”:</b> otro programa la editó mientras escribías. Elegí “Usar la del disco” o seguí escribiendo para quedarte con tu versión (la otra queda en el historial).</li>
+<li><b>macOS pide acceso a un disco externo:</b> si tu vault está en un USB o disco externo, macOS pregunta una vez. Si dijiste que no, activalo en Configuración del Sistema → Privacidad y seguridad → Archivos y carpetas → OpenBlocks → Volúmenes extraíbles.</li>
 <li><b>Linux sin FUSE:</b> el comando <code>openblocks</code> corre la AppImage extraída automáticamente.</li>
 </ul>
 </div>
@@ -209,7 +227,7 @@ codex mcp add openblocks -- openblocks mcp
 <h2 id="install-en">Install</h2>
 <pre><code>curl -fsSL https://raw.githubusercontent.com/Lautaro005/openblocks/main/install.sh | sh</code></pre>
 <pre><code>irm https://raw.githubusercontent.com/Lautaro005/openblocks/main/install.ps1 | iex</code></pre>
-<p>macOS installs to <code>/Applications/OpenBlocks.app</code>, Linux to <code>~/.local/opt/openblocks</code> with a menu entry, Windows to the user's programs. You also get the <code>openblocks</code> command. Installer options: <code>--build</code>, <code>--user</code>, <code>--uninstall</code>. The installers are not code-signed yet: on macOS the script clears the quarantine flag; on Windows SmartScreen may ask for “More info → Run anyway”.</p>
+<p>macOS installs to <code>/Applications/OpenBlocks.app</code>, Linux to <code>~/.local/opt/openblocks</code> with a menu entry, Windows to the user's programs. You also get the <code>openblocks</code> command. Installer options: <code>--build</code>, <code>--user</code>, <code>--uninstall</code>. The macOS app is signed with OpenBlocks' own certificate, so macOS remembers what you allow (like a vault on a USB drive) across updates; it is not notarized by Apple, so the script clears the quarantine flag and a hand-downloaded <code>.dmg</code> opens with right-click → Open the first time. On Windows SmartScreen may ask for “More info → Run anyway”.</p>
 <h2 id="start-en">First run</h2>
 <p>Pick a language and theme, the vault folder (empty, or one with notes such as your Obsidian vault), its name, and your default AI model. Run it again from Settings → General.</p>
 <h2 id="editor-en">Editor</h2>
@@ -228,6 +246,13 @@ codex mcp add openblocks -- openblocks mcp
 <p>Drop files on a page: they are copied to an <code>attachments</code> folder next to it. Click one for the side preview, or pop it into a floating window. PDF, Word, Excel/CSV, PowerPoint, images, audio, video, Markdown and code all preview locally, with no internet.</p>
 <h2 id="databases-en">Databases</h2>
 <p>Right-click a folder → View as database. Pages are rows, properties are columns. Table (edit, sort, hide, add columns) or board (grouped by a property; drag cards to change it). Everything stays in each page's frontmatter.</p>
+<h2 id="import-en">Import from Notion</h2>
+<p><b>Settings → Import</b> brings a whole Notion workspace into a new folder of the vault (<code>Notion</code>, or a name you pick). Nothing changes in Notion. Two ways:</p>
+<ul>
+<li><b>With a token (recommended).</b> At <a href="https://www.notion.so/profile/integrations">notion.so/profile/integrations</a> create an internal integration, pick the pages it can see in its <i>Access</i> tab (picking the top ones brings everything inside them) and paste its <i>Internal integration secret</i> into OpenBlocks. You get pages, subpages (also the ones inside toggles and columns), every row of every database with its properties, and the files Notion hosts. The token is not saved; delete the integration afterwards if you like.</li>
+<li><b>With the export.</b> In Notion: Settings → General → <i>Export all workspace content</i>, as <i>Markdown &amp; CSV</i> with subpages. Drop the <code>.zip</code> on OpenBlocks (or choose several parts at once, or the folder your browser unzipped). Nothing goes online.</li>
+</ul>
+<p>Pages with subpages become a folder with the page inside; databases become database folders (one page per row, properties in the frontmatter as dates, checkboxes, numbers, lists and links); page links and mentions become <code>[[wikilinks]]</code>; images and files are embedded; callouts, toggles, tables, code and equations keep their shape. A progress bar shows what is being copied, with Cancel, and at the end a list of what could not be brought over.</p>
 <h2 id="links-en">Links and graph</h2>
 <p>Type <kbd>[[</kbd> to link a page (or create it). Each page lists backlinks and unlinked mentions. Renaming or moving a page fixes every link to it. <kbd>⌘G</kbd> opens the graph. <kbd>⌘</kbd>-click a <code>#tag</code> to list its pages.</p>
 <h2 id="history-en">History and trash</h2>
@@ -247,7 +272,7 @@ codex mcp add openblocks -- openblocks mcp</code></pre>
 <h2 id="data-en">Where your data lives</h2>
 <p>Pages and files in your vault; history, trash, chats and views in <code>&lt;vault&gt;/.openblocks/</code>; settings and API keys in <code>~/.openblocks/settings.json</code> (mode 600).</p>
 <h2 id="trouble-en">Troubleshooting</h2>
-<p>No models: open Ollama or LM Studio, or install Claude Code or Codex, then refresh the picker. Port 47880 busy: OpenBlocks picks another one, or use <code>--port</code>. “The page changed outside OpenBlocks”: another program edited it; choose which version to keep — the other stays in the history.</p>
+<p>No models: open Ollama or LM Studio, or install Claude Code or Codex, then refresh the picker. Port 47880 busy: OpenBlocks picks another one, or use <code>--port</code>. “The page changed outside OpenBlocks”: another program edited it; choose which version to keep — the other stays in the history. macOS asks for access to an external drive: if your vault is on a USB or external disk, it asks once; if you said no, turn it on in System Settings → Privacy &amp; Security → Files and Folders → OpenBlocks → Removable Volumes.</p>
 </div>
     </article>
   </div>

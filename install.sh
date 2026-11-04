@@ -93,7 +93,8 @@ if [ "$BUILD" = 1 ]; then
   git clone --depth 1 --branch "$BRANCH" "https://github.com/$REPO.git" "$TMP/src" >/dev/null 2>&1 || fail "could not clone $REPO"
   (cd "$TMP/src/apps/desktop" && npm ci --silent) || fail "npm ci failed"
   if [ "$OS" = "Darwin" ]; then
-    (cd "$TMP/src/apps/desktop" && npx tauri build --bundles app) || fail "build failed"
+    # Signed ad hoc, so macOS can remember what you allow (a vault on a USB drive, say).
+    (cd "$TMP/src/apps/desktop" && APPLE_SIGNING_IDENTITY=- npx tauri build --bundles app) || fail "build failed"
     install_bundle_mac "$TMP/src/target/release/bundle/macos"
   else
     (cd "$TMP/src/apps/desktop" && npx tauri build --bundles appimage) || fail "build failed"

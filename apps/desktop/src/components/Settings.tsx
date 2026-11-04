@@ -23,8 +23,11 @@ import {
   FilePlus,
   FileText,
   Globe,
+  DownloadSimple,
+  NotionLogo,
+  FileZip,
 } from "@phosphor-icons/react";
-import { api } from "../lib/api";
+import { api, type ImportStatus } from "../lib/api";
 import { mod, useStore } from "../lib/store";
 import { t } from "../lib/i18n";
 import { Brand } from "./Brand";
@@ -36,6 +39,7 @@ const TABS: [string, string, any][] = [
   ["general", "General", GearSix],
   ["vault", "Vault", FolderSimple],
   ["templates", "Plantillas", FileDashed],
+  ["import", "Importar", DownloadSimple],
   ["ai", "IA", Sparkle],
   ["family", "Familia WorkStudio", UsersThree],
   ["keys", "Atajos", Keyboard],
@@ -69,6 +73,7 @@ export function Settings() {
           {tab === "general" && <General />}
           {tab === "vault" && <VaultTab />}
           {tab === "templates" && <TemplatesTab />}
+          {tab === "import" && <ImportTab />}
           {tab === "ai" && <AiTab />}
           {tab === "family" && <FamilyTab />}
           {tab === "keys" && <Keys />}
@@ -305,6 +310,189 @@ function TemplatesTab() {
         <input className="input" defaultValue={folder} onBlur={(e) => e.target.value.trim() && st.saveSettings({ templates_folder: e.target.value.trim() })} />
       </Row>
     </section>
+  );
+}
+
+const NOTION_INTEGRATIONS = "https://www.notion.so/profile/integrations";
+
+function ImportTab() {
+  const st = useStore();
+  const [mode, setMode] = useState<"token" | "export">("token");
+  const [token, setToken] = useState("");
+  const [folder, setFolder] = useState("Notion");
+  const [s, setS] = useState<ImportStatus | null>(null);
+  const [drag, setDrag] = useState(false);
+  const load = () => api.importStatus().then(setS).catch(() => {});
+  useEffect(() => {
+    load();
+  }, []);
+  useEffect(() => {
+    if (!s?.running) return;
+    const i = setInterval(load, 700);
+    return () => clearInterval(i);
+  }, [s?.running]);
+  const start = async (f: () => Promise<unknown>) => {
+    try {
+      await f();
+      setToken("");
+      await load();
+    } catch (e: any) {
+      st.toast(e.message, "error");
+    }
+  };
+  const pick = async (kind: "zip" | "folder") => {
+    const r = await api.importPick(kind).catch((e) => (st.toast(e.message, "error"), null));
+    if (r?.paths.length) start(() => api.importExport(r.paths, folder));
+  };
+  const drop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDrag(false);
+    const f = [...e.dataTransfer.files].find((x) => /\.zip$/i.test(x.name));
+    if (!f) return st.toast(t("Soltá el .zip que bajaste de Notion."), "error");
+    start(() => api.importUpload(f, folder));
+  };
+  const running = !!s?.running;
+  const pct = s?.total ? Math.min(100, Math.round((s.done / s.total) * 100)) : 0;
+  const n = (k: number, one: string, many: string) => `${k} ${t(k === 1 ? one : many)}`;
+  const counts = s && [n(s.pages, "página", "páginas"), n(s.databases, "base de datos", "bases de datos"), n(s.files, "archivo", "archivos")].join(" · ");
+  return (
+    <>
+      <h3>{t("Importar")}</h3>
+      <p className="muted">{t("Traé tus páginas de otras apps al vault abierto. En la app de origen no se toca nada.")}</p>
+      <div className="fam-card import-card">
+        <div className="fam-head">
+          <span className="fam-logo">
+            <NotionLogo size={24} />
+          </span>
+          <div className="fam-title">
+            <b>Notion</b>
+            <span className="muted xs">{t("Páginas, subpáginas, bases de datos con sus propiedades, imágenes y archivos.")}</span>
+          </div>
+        </div>
+        {running ? (
+          <div className="import-run">
+            <div className="import-phase">
+              <b>{t(s!.phase || "Preparando…")}</b>
+              <span className="muted xs">{s!.total ? `${s!.done} / ${s!.total}` : ""}</span>
+            </div>
+            <div className={`bar ${s!.total ? "" : "indeterminate"}`}>
+              <span style={{ width: s!.total ? `${pct}%` : undefined }} />
+            </div>
+            <div className="tpl-actions">
+              <span className="muted xs">{counts}</span>
+              <button className="btn sm ghost push" onClick={() => api.importCancel().then(load)}>
+                {t("Cancelar")}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <Seg
+              value={mode}
+              options={[
+                ["token", t("Con un token (recomendado)")],
+                ["export", t("Con la exportación .zip")],
+              ]}
+              onChange={(v) => setMode(v as any)}
+            />
+            {mode === "token" ? (
+              <>
+                <ol className="import-steps">
+                  <li>
+                    {t("Creá una integración interna en Notion (Nueva integración → Interna).")}{" "}
+                    <button className="btn-link" onClick={() => api.openUrl(NOTION_INTEGRATIONS)}>
+                      {t("Abrir integraciones")} <ArrowSquareOut size={12} />
+                    </button>
+                  </li>
+                  <li>{t("En la pestaña «Acceso», elegí las páginas a traer. Con las de arriba de todo viene todo lo que tienen adentro.")}</li>
+                  <li>{t("Copiá el «Secreto de integración interna» y pegalo acá.")}</li>
+                </ol>
+                <div className="import-token">
+                  <input
+                    className="input"
+                    type="password"
+                    autoComplete="off"
+                    spellCheck={false}
+                    placeholder="ntn_…"
+                    value={token}
+                    onChange={(e) => setToken(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && token.trim() && start(() => api.importToken(token, folder))}
+                  />
+                  <button className="btn primary" disabled={!token.trim()} onClick={() => start(() => api.importToken(token, folder))}>
+                    {t("Importar")}
+                  </button>
+                </div>
+                <p className="muted xs">{t("El token se usa solo para esta importación: no se guarda. Después podés borrar la integración en Notion.")}</p>
+              </>
+            ) : (
+              <>
+                <ol className="import-steps">
+                  <li>{t("En Notion: Configuración → General → «Exportar todo el contenido del espacio de trabajo» (o «Exportar» en el menú ··· de una página).")}</li>
+                  <li>{t("Formato «Markdown y CSV», con «Incluir subpáginas» y «Crear carpetas para subpáginas».")}</li>
+                  <li>{t("Bajá el .zip que te manda Notion y soltalo acá.")}</li>
+                </ol>
+                <div
+                  className={`import-drop ${drag ? "over" : ""}`}
+                  onDragOver={(e) => (e.preventDefault(), e.stopPropagation(), setDrag(true))}
+                  onDragLeave={() => setDrag(false)}
+                  onDrop={drop}
+                >
+                  <FileZip size={28} />
+                  <span>{t("Soltá el .zip acá")}</span>
+                  <div className="tpl-actions">
+                    <button className="btn sm primary" onClick={() => pick("zip")}>
+                      {t("Elegir .zip")}
+                    </button>
+                    <button className="btn sm ghost" onClick={() => pick("folder")}>
+                      {t("Elegir carpeta")}
+                    </button>
+                  </div>
+                  <span className="muted xs">{t("Si tu navegador lo descomprimió, elegí la carpeta. Si son varias partes, elegilas todas juntas.")}</span>
+                </div>
+              </>
+            )}
+            <Row label={t("Carpeta de destino")} hint={t("Se crea en el vault. Si ya existe, se usa «Notion 2».")}>
+              <input className="input" value={folder} onChange={(e) => setFolder(e.target.value)} placeholder="Notion" />
+            </Row>
+          </>
+        )}
+        {s?.finished && !running && (
+          <div className={`import-result ${s.error ? "bad" : ""}`}>
+            {s.error ? (
+              <span className="bad-text">{s.error}</span>
+            ) : s.cancelled ? (
+              <span>{t("Importación cancelada. Lo que ya se copió quedó en «{f}».", { f: s.folder ?? "" })}</span>
+            ) : (
+              <span>
+                <Check size={14} /> {t("Listo: {c} en «{f}».", { c: counts ?? "", f: s.folder ?? "" })}
+              </span>
+            )}
+            {s.folder && !s.error && (
+              <button
+                className="btn sm"
+                onClick={() => {
+                  useStore.setState({ settingsTab: null });
+                  st.refreshTree().then(() => st.go({ kind: "folder", path: s.folder! }));
+                }}
+              >
+                <FolderOpen size={14} /> {t("Abrir carpeta")}
+              </button>
+            )}
+          </div>
+        )}
+        {!!s?.warnings.length && !running && (
+          <details className="import-warn">
+            <summary>{t("{n} cosas no se pudieron traer", { n: s.warnings.length })}</summary>
+            <ul>
+              {s.warnings.map((w, i) => (
+                <li key={i}>{w}</li>
+              ))}
+            </ul>
+          </details>
+        )}
+      </div>
+    </>
   );
 }
 

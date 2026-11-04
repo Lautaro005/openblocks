@@ -49,6 +49,66 @@ pub fn pick_folder(prompt: &str) -> Option<PathBuf> {
     }
 }
 
+/// Shows the system's file dialog for one or more `.zip` files.
+pub fn pick_zips(prompt: &str) -> Option<Vec<PathBuf>> {
+    let out = if cfg!(target_os = "macos") {
+        let p = prompt.replace('"', "'");
+        let script = format!(
+            "set fs to choose file with prompt \"{p}\" of type {{\"zip\", \"public.zip-archive\"}} with multiple selections allowed\n\
+             set o to \"\"\n\
+             repeat with f in fs\n set o to o & POSIX path of f & linefeed\n end repeat\n\
+             return o"
+        );
+        command("osascript").args(["-e", &script]).output().ok()?
+    } else if cfg!(windows) {
+        let script = "Add-Type -AssemblyName System.Windows.Forms; \
+            $d = New-Object System.Windows.Forms.OpenFileDialog; \
+            $d.Filter = 'Zip (*.zip)|*.zip'; $d.Multiselect = $true; \
+            if ($d.ShowDialog() -eq 'OK') { [Console]::Out.Write(($d.FileNames -join \"`n\")) }";
+        command("powershell")
+            .args(["-NoProfile", "-STA", "-Command", script])
+            .output()
+            .ok()?
+    } else if crate::util::which("zenity").is_some() {
+        command("zenity")
+            .args([
+                "--file-selection",
+                "--multiple",
+                "--separator=\n",
+                "--file-filter=*.zip",
+                "--title",
+                prompt,
+            ])
+            .output()
+            .ok()?
+    } else if crate::util::which("kdialog").is_some() {
+        command("kdialog")
+            .args([
+                "--getopenfilename",
+                "~",
+                "*.zip",
+                "--multiple",
+                "--separate-output",
+                "--title",
+                prompt,
+            ])
+            .output()
+            .ok()?
+    } else {
+        return None;
+    };
+    if !out.status.success() {
+        return None;
+    }
+    let v: Vec<PathBuf> = String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .map(|l| l.trim())
+        .filter(|l| !l.is_empty())
+        .map(PathBuf::from)
+        .collect();
+    (!v.is_empty()).then_some(v)
+}
+
 /// Opens a file or folder with its default app.
 pub fn open_path(p: &Path) -> std::io::Result<()> {
     let mut c = if cfg!(target_os = "macos") {

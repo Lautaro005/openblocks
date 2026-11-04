@@ -75,6 +75,22 @@ const q = (o: Record<string, string | number | boolean | undefined>) =>
     .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`)
     .join("&");
 
+export type ImportStatus = {
+  running: boolean;
+  finished: boolean;
+  cancelled: boolean;
+  source: string;
+  phase: string;
+  done: number;
+  total: number;
+  pages: number;
+  databases: number;
+  files: number;
+  folder: string | null;
+  error: string | null;
+  warnings: string[];
+};
+
 export const api = {
   get: <T>(url: string) => req<T>("GET", url),
   post: <T>(url: string, body?: unknown) => req<T>("POST", url, body ?? {}),
@@ -104,7 +120,7 @@ export const api = {
   collapsed: (collapsed: string[]) => req("POST", "/api/collapsed", { collapsed }),
   search: (s: string, limit = 40) => req<Hit[]>("GET", "/api/search" + q({ q: s, limit })),
   titles: (s: string, limit = 12) => req<Hit[]>("GET", "/api/titles" + q({ q: s, limit })),
-  resolve: (s: string) => req<{ path: string | null }>("GET", "/api/resolve" + q({ q: s })),
+  resolve: (s: string) => req<{ path: string | null; kind?: "page" | "file" | "folder" }>("GET", "/api/resolve" + q({ q: s })),
   backlinks: (path: string) => req<{ linked: any[]; unlinked: any[] }>("GET", "/api/backlinks" + q({ path })),
   graph: () => req<{ nodes: any[]; edges: [string, string][] }>("GET", "/api/graph"),
   tags: () => req<{ tag: string; count: number; pages: string[] }[]>("GET", "/api/tags"),
@@ -127,6 +143,12 @@ export const api = {
   deleteChat: (id: string) => req("DELETE", "/api/ai/chat" + q({ id })),
   stopChat: (chat: string) => req("POST", "/api/ai/stop", { chat }),
   undo: (edit: any) => req("POST", "/api/ai/undo", edit),
+  importStatus: () => req<ImportStatus>("GET", "/api/import"),
+  importCancel: () => req("POST", "/api/import/cancel"),
+  importPick: (kind: "zip" | "folder") => req<{ paths: string[] }>("POST", "/api/import/pick", { kind }),
+  importToken: (token: string, folder: string) => req("POST", "/api/import/notion/token", { token, folder }),
+  importExport: (paths: string[], folder: string) => req("POST", "/api/import/notion/export", { paths, folder }),
+  importUpload: (file: File, folder: string) => req("POST", "/api/import/notion/upload" + q({ folder }), undefined, file),
   remote: () => req<any>("GET", "/api/remote"),
   remoteSet: (patch: any) => req<any>("PUT", "/api/remote", patch),
   remoteToken: () => req<any>("POST", "/api/remote/token"),

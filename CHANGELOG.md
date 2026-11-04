@@ -2,6 +2,28 @@
 
 All notable changes to OpenBlocks. Dates are YYYY-MM-DD.
 
+## [0.1.1] — 2026-11-03
+
+### Import from Notion
+- New **Settings → Import**: bring a whole Notion workspace into a folder of the vault, two ways.
+  - **With a token (recommended):** create an internal integration in Notion, pick the pages it can see and paste
+    its secret. OpenBlocks reads every page and database through the Notion API — subpages, pages inside toggles
+    and columns, every database row, typed properties and the files Notion hosts — and the token is not saved.
+  - **With the export:** drop the `.zip` from Notion's "Markdown & CSV" export (zips of zips and several parts work
+    too), or choose the folder your browser unzipped.
+- Both end the same way: Notion's ids leave the names, a page with subpages becomes a folder with the page inside,
+  databases become database folders (one page per row, properties in the frontmatter as dates, checkboxes, numbers,
+  lists and links), links between pages become `[[wikilinks]]`, images and files are embedded, callouts, toggles,
+  tables, code and equations keep their shape.
+- A progress bar with what is being copied, Cancel, and a list of what could not be brought over.
+- Links to a folder (like an imported database) now open the folder.
+
+### macOS
+- The app is now properly code-signed. Before, the bundle had no signature, so macOS could not remember the
+  permission to read a vault on a USB or external drive and asked again and again when the app opened. Now it asks
+  once, and the answer sticks — also across updates, because every release is signed with the same OpenBlocks
+  certificate (it is not an Apple notarization: the first launch of a downloaded `.dmg` still needs right-click → Open).
+
 ## [0.1.0] — 2026-11-02
 
 The first release: block notes on your own Markdown folder, with AI agents that use your own models.

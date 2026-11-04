@@ -391,7 +391,20 @@ async fn titles(State(st): State<Shared>, Query(q): Query<PathQ>) -> R {
 
 async fn resolve(State(st): State<Shared>, Query(q): Query<PathQ>) -> R {
     let v = vault(&st)?;
-    Ok(Json(json!({"path": v.resolve(&q.q)})))
+    if let Some(p) = v.resolve(&q.q) {
+        let kind = if crate::vault::is_note(&p) {
+            "page"
+        } else {
+            "file"
+        };
+        return Ok(Json(json!({"path": p, "kind": kind})));
+    }
+    // A link to a folder (a database imported from Notion, say) opens the folder.
+    let t = q.q.trim().trim_matches('/');
+    if !t.is_empty() && v.abs(t).map(|p| p.is_dir()).unwrap_or(false) {
+        return Ok(Json(json!({"path": t, "kind": "folder"})));
+    }
+    Ok(Json(json!({"path": null})))
 }
 
 async fn backlinks(State(st): State<Shared>, Query(q): Query<PathQ>) -> R {
@@ -819,6 +832,101 @@ async fn update_run() -> R {
     ok()
 }
 
+// ---------- import ----------
+
+async fn import_status() -> R {
+    Ok(Json(json!(crate::import::status())))
+}
+
+async fn import_cancel() -> R {
+    crate::import::cancel();
+    ok()
+}
+
+async fn import_token(State(st): State<Shared>, Json(b): Json<Value>) -> R {
+    crate::import::start_token(
+        st,
+        b["token"].as_str().unwrap_or("").to_string(),
+        b["folder"].as_str().unwrap_or("").to_string(),
+    )?;
+    ok()
+}
+
+async fn import_export(State(st): State<Shared>, Json(b): Json<Value>) -> R {
+    let paths: Vec<std::path::PathBuf> = b["paths"]
+        .as_array()
+        .map(|a| {
+            a.iter()
+                .filter_map(|p| p.as_str())
+                .map(util::expand)
+                .collect()
+        })
+        .unwrap_or_default();
+    crate::import::start_export(
+        st,
+        paths,
+        b["folder"].as_str().unwrap_or("").to_string(),
+        false,
+    )?;
+    ok()
+}
+
+/// A dropped export, streamed to a temporary file (exports can be gigabytes), then imported.
+async fn import_upload(
+    State(st): State<Shared>,
+    Query(q): Query<PathQ>,
+    body: axum::body::Body,
+) -> R {
+    use tokio::io::AsyncWriteExt;
+    let dir = std::env::temp_dir().join(format!("openblocks-upload-{}", util::new_id()));
+    tokio::fs::create_dir_all(&dir).await?;
+    let path = dir.join("notion-export.zip");
+    let mut f = tokio::fs::File::create(&path).await?;
+    let mut s = body.into_data_stream();
+    while let Some(chunk) = s.next().await {
+        let chunk = chunk.map_err(|e| ApiError(StatusCode::BAD_REQUEST, e.to_string()))?;
+        f.write_all(&chunk).await?;
+    }
+    f.flush().await?;
+    drop(f);
+    let r = crate::import::start_export(st, vec![path.clone()], q.folder.clone(), true);
+    if r.is_err() {
+        let _ = tokio::fs::remove_dir_all(&dir).await;
+    }
+    r?;
+    ok()
+}
+
+async fn import_pick(State(st): State<Shared>, Json(b): Json<Value>) -> R {
+    let folder = b["kind"] == "folder";
+    let prompt = {
+        let s = st.settings.read().unwrap();
+        if folder {
+            settings::tr(
+                &s,
+                "Elegí la carpeta de la exportación de Notion",
+                "Choose the Notion export folder",
+            )
+        } else {
+            settings::tr(
+                &s,
+                "Elegí el .zip que exportaste de Notion",
+                "Choose the .zip you exported from Notion",
+            )
+        }
+        .to_string()
+    };
+    let kind = if folder {
+        crate::Pick::Folder
+    } else {
+        crate::Pick::Zips
+    };
+    let p = tokio::task::spawn_blocking(move || crate::pick(&prompt, kind))
+        .await
+        .unwrap_or(None);
+    Ok(Json(json!({"paths": p.unwrap_or_default()})))
+}
+
 async fn quit() -> R {
     tokio::spawn(async {
         tokio::time::sleep(std::time::Duration::from_millis(200)).await;
@@ -922,6 +1030,12 @@ pub fn router(st: Shared, port: u16) -> Router {
         .route("/api/remote/reconnect", post(remote_reconnect))
         .route("/api/local", get(local_get))
         .route("/api/local/download", post(local_download))
+        .route("/api/import", get(import_status))
+        .route("/api/import/cancel", post(import_cancel))
+        .route("/api/import/pick", post(import_pick))
+        .route("/api/import/notion/token", post(import_token))
+        .route("/api/import/notion/export", post(import_export))
+        .route("/api/import/notion/upload", post(import_upload))
         .with_state(st);
     api.fallback(ui)
         .layer(DefaultBodyLimit::max(512 * 1024 * 1024))

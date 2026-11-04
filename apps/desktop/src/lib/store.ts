@@ -69,6 +69,9 @@ function namesOf(tree: TreeNode[], out = new Set<string>()) {
     } else if (n.kind === "file") {
       out.add(n.name.toLowerCase());
       out.add(n.path.toLowerCase());
+    } else if (n.kind === "folder") {
+      // Links to folders (databases imported from Notion) open the folder.
+      out.add(n.path.toLowerCase());
     }
     if (n.children) namesOf(n.children, out);
   }

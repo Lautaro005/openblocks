@@ -34,6 +34,7 @@
 <li><b>IA con un proveedor en la nube.</b> Si elegís Claude Code, Codex, Anthropic, OpenAI, OpenRouter u otra API, lo que mandás en el chat (y la página que va como contexto) viaja a ese proveedor, bajo tu cuenta y sus términos. Con Ollama o LM Studio todo queda en tu equipo.</li>
 <li><b>Búsqueda web.</b> Solo con la pill Web encendida: las consultas van a DuckDuckGo y las páginas que el agente lee se descargan directamente.</li>
 <li><b>Modelos locales.</b> Si tocás Descargar en Ajustes → IA → Modelos locales, se bajan llama.cpp de GitHub y Gemma 4 o EmbeddingGemma 2 de Hugging Face. Después corren en tu equipo: las imágenes y PDFs que leen no salen de tu compu. Si tenés Lumina, se usan sus modelos.</li>
+<li><b>Importar desde Notion.</b> Solo si lo usás (Ajustes → Importar). Con un token, OpenBlocks le pide tus páginas a la API de Notion y baja los archivos que Notion guarda; el token se usa para esa importación y no se guarda. Con la exportación <code>.zip</code> no se conecta a nada: todo pasa en tu equipo.</li>
 <li><b>Acceso remoto por URL.</b> Apagado de fábrica. Si lo prendés, el servidor MCP se publica con un túnel de Cloudflare: los agentes que tengan la URL (con su token secreto) pueden leer y, si no está en solo lectura, cambiar tus vaults, y ese tráfico pasa por Cloudflare.</li>
 <li><b>Actualizaciones.</b> La app consulta la API pública de GitHub para saber si hay una versión nueva (se apaga en Ajustes → General).</li>
 <li><b>Familia WorkStudio.</b> brain, Lumina y OpenCue corren en tu equipo; OpenBlocks les habla por <code>127.0.0.1</code>.</li>
@@ -60,6 +61,7 @@
 <li><b>AI with a cloud provider.</b> With Claude Code, Codex, Anthropic, OpenAI, OpenRouter or another API, what you send in the chat (and the page sent as context) goes to that provider, under your account and its terms. With Ollama or LM Studio everything stays on your computer.</li>
 <li><b>Web search.</b> Only with the Web pill on: queries go to DuckDuckGo and pages the agent reads are downloaded directly.</li>
 <li><b>Local models.</b> If you press Download in Settings → AI → Local models, llama.cpp comes from GitHub and Gemma 4 or EmbeddingGemma 2 from Hugging Face. Then they run on your computer: the images and PDFs they read never leave it. If you have Lumina, its models are used.</li>
+<li><b>Import from Notion.</b> Only if you use it (Settings → Import). With a token, OpenBlocks asks Notion's API for your pages and downloads the files Notion hosts; the token is used for that import and not saved. With the <code>.zip</code> export nothing goes online: it all happens on your computer.</li>
 <li><b>Remote access by URL.</b> Off by default. When you turn it on, the MCP server is published through a Cloudflare tunnel: agents with the URL (and its secret token) can read and, unless it is read-only, change your vaults, and that traffic goes through Cloudflare.</li>
 <li><b>Updates.</b> The app asks GitHub's public API whether there is a new version (turn it off in Settings → General).</li>
 <li><b>WorkStudio family.</b> brain, Lumina and OpenCue run on your computer; OpenBlocks talks to them on <code>127.0.0.1</code>.</li>

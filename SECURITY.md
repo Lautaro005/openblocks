@@ -58,8 +58,15 @@ reproduce and the impact you expect. Remove API keys, page contents and personal
   OpenBlocks uses Lumina's `llama-server` and models when they are installed; otherwise it downloads llama.cpp from
   its official GitHub release and the models from Hugging Face (`ggml-org`) to `~/.openblocks/models`. Scanned PDFs
   are opened in a child process so a broken file cannot crash the app.
+- **Importing from Notion** (`crates/core/src/import/`). The integration token is held in memory for one import, sent
+  only to `api.notion.com` and never saved or logged. Files Notion hosts are downloaded from the signed links its API
+  returns. A `.zip` export is unpacked into a temporary folder with every entry checked to stay inside it (no `..` or
+  absolute paths), then deleted; nothing is written outside the new destination folder of the vault, and imported
+  Markdown is treated like any other page (raw HTML is escaped when rendered).
 - **Updates and installers.** `openblocks update` and the in-app update button run the official installer from this
-  repository, which downloads the latest GitHub Release. Installers are not yet code-signed by Apple or Microsoft.
+  repository, which downloads the latest GitHub Release. The macOS app is signed with the project's own certificate
+  (a stable identity so macOS keeps permissions across updates) but not notarized by Apple; Windows installers are
+  not code-signed yet.
 - **Symbolic links.** A symlink inside your vault is followed like any file. Do not put links to folders you would not
   want an agent to read inside a vault.
 
@@ -67,7 +74,8 @@ reproduce and the impact you expect. Remove API keys, page contents and personal
 
 In scope: a web page, file or note reaching the local API or running code in the app; path traversal out of the vault;
 API keys leaking to the UI, logs or a provider they do not belong to; an agent editing without leaving a history copy;
-the installers running anything other than the official release.
+the installers running anything other than the official release; a Notion import writing outside its destination
+folder, or the Notion token being stored, logged or sent anywhere but Notion.
 
 Out of scope: what a model or provider does with what you send it (see their policies), what the family apps do by
 themselves (report it to their repositories), and anything that needs an attacker who already runs code as your user.

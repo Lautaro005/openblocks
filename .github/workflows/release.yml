@@ -43,6 +43,30 @@ jobs:
         with:
           targets: ${{ runner.os == 'macOS' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
       - uses: Swatinem/rust-cache@v2
+      - name: macOS signing identity
+        if: runner.os == 'macOS'
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        run: |
+          # A signed bundle lets macOS remember what the user allowed (like a vault on a USB drive).
+          # With the project's certificate the signature stays the same across versions, so the
+          # permission also survives updates; without it (forks) the app is signed ad hoc.
+          if [ -n "$MACOS_CERTIFICATE" ]; then
+            KC="$RUNNER_TEMP/build.keychain-db"
+            KP="$(openssl rand -hex 16)"
+            printf '%s' "$MACOS_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+            security create-keychain -p "$KP" "$KC"
+            security set-keychain-settings -lut 7200 "$KC"
+            security unlock-keychain -p "$KP" "$KC"
+            security import "$RUNNER_TEMP/cert.p12" -k "$KC" -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+            security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KP" "$KC" > /dev/null
+            security list-keychains -d user -s "$KC" $(security list-keychains -d user | tr -d '"')
+            rm -f "$RUNNER_TEMP/cert.p12"
+            echo "APPLE_SIGNING_IDENTITY=OpenBlocks Code Signing" >> "$GITHUB_ENV"
+          else
+            echo "APPLE_SIGNING_IDENTITY=-" >> "$GITHUB_ENV"
+          fi
       - name: Build and publish
         uses: tauri-apps/tauri-action@v0
         env:
@@ -61,3 +85,9 @@ jobs:
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
+      - name: Check the macOS signature
+        if: runner.os == 'macOS'
+        run: |
+          APP="$(ls -d target/universal-apple-darwin/release/bundle/macos/*.app | head -n1)"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          codesign -d -r- "$APP"

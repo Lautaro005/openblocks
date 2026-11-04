@@ -47,6 +47,11 @@ The app goes to `/Applications/OpenBlocks.app` on macOS (or `~/Applications` wit
 vaults are never touched). No build for your platform yet? Add `-s -- --build` to compile from source (needs git,
 Node and Rust).
 
+The macOS app is signed with OpenBlocks' own certificate, so macOS remembers what you allow (like a vault on a USB
+drive) across updates. It is not notarized by Apple: the install script clears the quarantine flag, and a `.dmg`
+downloaded by hand opens with right-click → Open the first time. Windows SmartScreen may ask for "More info → Run
+anyway".
+
 ## What it does
 
 | | |
@@ -54,6 +59,7 @@ Node and Rust).
 | **Your folder, your files** | A vault is any folder. Pages are `.md` files with Obsidian's syntax: `[[links]]`, `![[embeds]]`, `#tags`, YAML properties, `> [!note]` callouts. Open an existing Obsidian vault as is; edits from other apps show up at once. |
 | **Block editor** | `/` menu, headings, tasks, tables, highlighted code, callouts, toggles, drag handles, Markdown shortcuts, paste Markdown as blocks, page properties, daily notes and templates. No separate edit mode: the document is the view. |
 | **Files** | Drop any file on a page. PDF, Word, Excel, CSV, PowerPoint, images, audio and video preview on the side or in a floating window — read locally, no internet. |
+| **Import from Notion** | Settings → Import brings a whole Notion workspace — pages, subpages, databases with typed properties, images and files — with an integration token or Notion's own `.zip` export. Links become `[[wikilinks]]`. |
 | **Databases** | Any folder as a table or a board: pages are rows, properties are editable columns, stored in each page's frontmatter. |
 | **Links and graph** | Backlinks, unlinked mentions, a force-directed graph, tag pages. Renaming or moving a page rewrites every link to it. |
 | **History and trash** | A version every ten minutes of editing and before every AI change, restorable in a click. Deleted items go to a trash inside the vault. |

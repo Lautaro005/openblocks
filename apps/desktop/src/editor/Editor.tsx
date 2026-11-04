@@ -178,7 +178,7 @@ export const Editor = forwardRef<EditorHandle, Props>(function Editor({ page, on
         onOpen: async (target: string) => {
           const r = await api.resolve(target).catch(() => ({ path: null }));
           const st = useStore.getState();
-          if (r.path) st.openPath(r.path);
+          if (r.path) st.openPath(r.path, r.kind);
           else {
             // Following a link to a page that does not exist creates it, like Obsidian.
             const name = target.split("/").pop() || target;
@@ -306,7 +306,7 @@ export const Editor = forwardRef<EditorHandle, Props>(function Editor({ page, on
           }
           if (href && !href.startsWith("#")) {
             event.preventDefault();
-            api.resolve(decodeURIComponent(href)).then((r) => r.path && useStore.getState().openPath(r.path));
+            api.resolve(decodeURIComponent(href)).then((r) => r.path && useStore.getState().openPath(r.path, r.kind));
             return true;
           }
         }
