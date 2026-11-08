@@ -67,6 +67,8 @@ reproduce and the impact you expect. Remove API keys, page contents and personal
   repository, which downloads the latest GitHub Release. The macOS app is signed with the project's own certificate
   (a stable identity so macOS keeps permissions across updates) but not notarized by Apple; Windows installers are
   not code-signed yet.
+- **Find and replace** runs entirely in the page: matches and replacements go through the editor (undoable, saved like
+  any edit) and regular expressions are evaluated by the browser engine on the page's own text only.
 - **Symbolic links.** A symlink inside your vault is followed like any file. Do not put links to folders you would not
   want an agent to read inside a vault.
 

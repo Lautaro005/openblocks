@@ -27,6 +27,7 @@
       <a href="#editor"><span data-l="es">Editor</span><span data-l="en">Editor</span></a>
       <a href="#markdown"><span data-l="es">Formato Markdown</span><span data-l="en">Markdown format</span></a>
       <a href="#files"><span data-l="es">Archivos</span><span data-l="en">Files</span></a>
+      <a href="#sidebar"><span data-l="es">Barra lateral y carpetas</span><span data-l="en">Sidebar and folders</span></a>
       <a href="#databases"><span data-l="es">Bases de datos</span><span data-l="en">Databases</span></a>
       <a href="#import"><span data-l="es">Importar desde Notion</span><span data-l="en">Import from Notion</span></a>
       <a href="#links"><span data-l="es">Enlaces y grafo</span><span data-l="en">Links and graph</span></a>
@@ -81,6 +82,11 @@
 <li>Se guarda solo, a los 0,7 segundos de dejar de escribir. Si otro programa cambió la página mientras tanto, OpenBlocks avisa en vez de pisarla.</li>
 </ul>
 
+<h3>Buscar y reemplazar</h3>
+<p><kbd>⌘F</kbd> (<kbd>Ctrl</kbd>+<kbd>F</kbd>) abre la barra de búsqueda de la página; con texto seleccionado, busca ese texto. Las coincidencias se resaltan; <kbd>↵</kbd> y <kbd>⇧↵</kbd> van a la siguiente y a la anterior. Opciones: distinguir mayúsculas, palabra completa y expresión regular (en el reemplazo, <code>$1</code>, <code>$2</code>… son los grupos). Con la flecha de la izquierda (o <kbd>⌘⌥F</kbd> / <kbd>Ctrl</kbd>+<kbd>H</kbd>) aparece el reemplazo: reemplazar una, todas (<kbd>⌘↵</kbd>), borrar todas las coincidencias o borrar los bloques que las tienen. Cada acción se deshace con <kbd>⌘Z</kbd>.</p>
+<h3>Seleccionar varios bloques</h3>
+<p>Como en el escritorio: apretá fuera del texto (en el margen de la página o debajo del último bloque) y arrastrá un rectángulo. Los bloques que toca quedan seleccionados para borrarlos, cortarlos, copiarlos, darles formato o pedirle algo a la IA. <kbd>Esc</kbd> quita la selección.</p>
+
 <h2 id="markdown">Formato Markdown</h2>
 <p>Las páginas usan Markdown con las extensiones de Obsidian, así abren igual en las dos apps:</p>
 <table>
@@ -106,6 +112,14 @@
 <tr><td>Markdown, texto y código</td><td>Con formato o como texto</td></tr>
 </table>
 <p>Los archivos de Office se leen en tu equipo (Rust, sin internet). Arrastrar archivos a la barra lateral los agrega a esa carpeta; un <code>.md</code> se convierte en página.</p>
+
+<h2 id="sidebar">Barra lateral y carpetas</h2>
+<ul>
+<li><b>Ancho:</b> arrastrá el borde derecho de la barra; doble clic lo vuelve al original.</li>
+<li><b>Barra flotante:</b> con la barra oculta (<kbd>⌘\</kbd>), llevá el mouse al borde izquierdo de la ventana y aparece encima de la página; se va cuando sacás el mouse. Su botón la vuelve a fijar.</li>
+<li><b>Carpetas:</b> clic en el nombre (se subraya) para abrirla: su propia página si tiene una con el mismo nombre (así llegan las páginas con subpáginas de Notion) o la vista de carpeta. Clic en el resto de la fila para desplegarla. En el menú del clic derecho, <i>Abrir</i> va primero.</li>
+<li><b>Vista de carpeta:</b> ordená por nombre, última edición o tipo (ascendente o descendente) o a mano, arrastrando los elementos; elegí lista o cuadrícula. Se guarda por carpeta.</li>
+</ul>
 
 <h2 id="databases">Bases de datos</h2>
 <p>Cualquier carpeta se puede ver como base de datos (clic derecho → Ver como base de datos). Cada página de la carpeta es una fila y cada propiedad, una columna.</p>
@@ -190,6 +204,8 @@ codex mcp add openblocks -- openblocks mcp
 <tr><td><kbd>⌘,</kbd></td><td>Ajustes</td></tr>
 <tr><td><kbd>⌘⇧H</kbd></td><td>Resaltar</td></tr>
 <tr><td><kbd>⌘⌥1</kbd>–<kbd>3</kbd></td><td>Títulos</td></tr>
+<tr><td><kbd>⌘F</kbd></td><td>Buscar en la página</td></tr>
+<tr><td><kbd>⌘⌥F</kbd> (<kbd>Ctrl</kbd>+<kbd>H</kbd>)</td><td>Buscar y reemplazar</td></tr>
 </table>
 <p>En Windows y Linux, <kbd>Ctrl</kbd> en lugar de <kbd>⌘</kbd>.</p>
 
@@ -215,6 +231,7 @@ codex mcp add openblocks -- openblocks mcp
 <li><b>No aparece ningún modelo:</b> abrí Ollama o LM Studio, o instalá Claude Code o Codex, y tocá “Volver a buscar modelos” en el selector.</li>
 <li><b>El puerto 47880 está ocupado:</b> OpenBlocks usa otro libre solo. Con <code>openblocks serve --port 48000</code> elegís uno.</li>
 <li><b>“La página cambió afuera”:</b> otro programa la editó mientras escribías. Elegí “Usar la del disco” o seguí escribiendo para quedarte con tu versión (la otra queda en el historial).</li>
+<li><b>Un enlace crea una página nueva en vez de abrir la que existe:</b> pasaba en la 0.1.1 con carpetas grandes (como una importación de Notion). Actualizá a la 0.1.2: el índice ya no pierde páginas y la búsqueda y el grafo vuelven a verlas.</li>
 <li><b>macOS pide acceso a un disco externo:</b> si tu vault está en un USB o disco externo, macOS pregunta una vez. Si dijiste que no, activalo en Configuración del Sistema → Privacidad y seguridad → Archivos y carpetas → OpenBlocks → Volúmenes extraíbles.</li>
 <li><b>Linux sin FUSE:</b> el comando <code>openblocks</code> corre la AppImage extraída automáticamente.</li>
 </ul>
@@ -240,10 +257,14 @@ codex mcp add openblocks -- openblocks mcp
 <li><b>Properties</b> at the top are the YAML frontmatter: text, number, date, checkbox or list.</li>
 <li>It saves itself 0.7 s after you stop typing, and warns instead of overwriting when another program changed the page.</li>
 </ul>
+<p><b>Find and replace:</b> <kbd>⌘F</kbd> (<kbd>Ctrl</kbd>+<kbd>F</kbd>) finds in the page — the selected text, if any — with match case, whole word and regular expressions; <kbd>↵</kbd>/<kbd>⇧↵</kbd> move between matches. <kbd>⌘⌥F</kbd> (<kbd>Ctrl</kbd>+<kbd>H</kbd>) adds replace: one, all (<kbd>⌘↵</kbd>), delete every match, or delete the blocks that contain them. All undoable.</p>
+<p><b>Select many blocks:</b> press outside the text (page margins, under the last block) and drag a rectangle, like on a desktop. Delete, cut, copy, format or ask the AI about the selected blocks; <kbd>Esc</kbd> clears it.</p>
 <h2 id="markdown-en">Markdown format</h2>
 <p><code>[[Page]]</code>, <code>![[file.pdf]]</code>, <code>&gt; [!warning] Title</code>, <code>&lt;details&gt;</code>, <code>- [ ]</code>, <code>==highlight==</code>, <code>#tag</code> — the same as Obsidian.</p>
 <h2 id="files-en">Files</h2>
 <p>Drop files on a page: they are copied to an <code>attachments</code> folder next to it. Click one for the side preview, or pop it into a floating window. PDF, Word, Excel/CSV, PowerPoint, images, audio, video, Markdown and code all preview locally, with no internet.</p>
+<h2 id="sidebar-en">Sidebar and folders</h2>
+<p>Drag the sidebar's edge to resize it (double-click resets). When it is hidden, move the mouse to the window's left edge and it floats over the page. Click a folder's name to open it — its own same-named page (how Notion pages with subpages arrive) or the folder view — and the rest of the row to expand it; <i>Open</i> leads the right-click menu. The folder view sorts by name, last edit, type or by hand (drag), as a list or a grid, saved per folder.</p>
 <h2 id="databases-en">Databases</h2>
 <p>Right-click a folder → View as database. Pages are rows, properties are columns. Table (edit, sort, hide, add columns) or board (grouped by a property; drag cards to change it). Everything stays in each page's frontmatter.</p>
 <h2 id="import-en">Import from Notion</h2>

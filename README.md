@@ -57,9 +57,10 @@ anyway".
 | | |
 |---|---|
 | **Your folder, your files** | A vault is any folder. Pages are `.md` files with Obsidian's syntax: `[[links]]`, `![[embeds]]`, `#tags`, YAML properties, `> [!note]` callouts. Open an existing Obsidian vault as is; edits from other apps show up at once. |
-| **Block editor** | `/` menu, headings, tasks, tables, highlighted code, callouts, toggles, drag handles, Markdown shortcuts, paste Markdown as blocks, page properties, daily notes and templates. No separate edit mode: the document is the view. |
+| **Block editor** | `/` menu, headings, tasks, tables, highlighted code, callouts, toggles, drag handles, Markdown shortcuts, paste Markdown as blocks, page properties, daily notes and templates. `⌘F` find and replace (case, whole word, regex), and a desktop-style rectangle to select many blocks at once. No separate edit mode: the document is the view. |
 | **Files** | Drop any file on a page. PDF, Word, Excel, CSV, PowerPoint, images, audio and video preview on the side or in a floating window — read locally, no internet. |
 | **Import from Notion** | Settings → Import brings a whole Notion workspace — pages, subpages, databases with typed properties, images and files — with an integration token or Notion's own `.zip` export. Links become `[[wikilinks]]`. |
+| **Sidebar and folders** | A resizable sidebar that floats over the page when hidden (mouse to the left edge). Folders open with a click on their name and list their contents sorted by name, date, type or by hand, as a list or a grid. |
 | **Databases** | Any folder as a table or a board: pages are rows, properties are editable columns, stored in each page's frontmatter. |
 | **Links and graph** | Backlinks, unlinked mentions, a force-directed graph, tag pages. Renaming or moving a page rewrites every link to it. |
 | **History and trash** | A version every ten minutes of editing and before every AI change, restorable in a click. Deleted items go to a trash inside the vault. |

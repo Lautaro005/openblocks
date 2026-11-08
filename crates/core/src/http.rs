@@ -389,6 +389,16 @@ async fn titles(State(st): State<Shared>, Query(q): Query<PathQ>) -> R {
     Ok(Json(json!(search::titles(&v, &q.q, q.limit.unwrap_or(12)))))
 }
 
+async fn folder_get(State(st): State<Shared>, Query(q): Query<PathQ>) -> R {
+    Ok(Json(vault(&st)?.folder_listing(&q.path)?))
+}
+
+async fn folder_view(State(st): State<Shared>, Json(b): Json<Value>) -> R {
+    let v = vault(&st)?;
+    v.set_folder_view(b["path"].as_str().unwrap_or(""), b["view"].clone());
+    ok()
+}
+
 async fn resolve(State(st): State<Shared>, Query(q): Query<PathQ>) -> R {
     let v = vault(&st)?;
     if let Some(p) = v.resolve(&q.q) {
@@ -983,7 +993,8 @@ pub fn router(st: Shared, port: u16) -> Router {
         .route("/api/tree", get(tree))
         .route("/api/page", get(get_page).put(save_page))
         .route("/api/page/create", post(create_page))
-        .route("/api/folder", post(create_folder))
+        .route("/api/folder", post(create_folder).get(folder_get))
+        .route("/api/folder/view", put(folder_view))
         .route("/api/move", post(move_entry))
         .route("/api/entry", delete(trash_entry))
         .route("/api/trash", get(trash_list).delete(trash_empty))

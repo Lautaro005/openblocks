@@ -4187,3 +4187,296 @@ img.brand {
   font-size: 12.5px;
   color: var(--ink-3);
 }
+
+/* ---------- sidebar: resize and floating peek ---------- */
+.sidebar:not(.floating) {
+  position: relative;
+}
+.side-resize {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 5;
+}
+.side-resize::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 2px;
+  width: 2px;
+  background: transparent;
+  transition: background 0.15s;
+}
+.side-resize:hover::after,
+body.resizing-side .side-resize::after {
+  background: var(--line-2);
+}
+body.resizing-side {
+  cursor: col-resize;
+  user-select: none;
+}
+body.resizing-side * {
+  cursor: col-resize !important;
+}
+.side-peek-zone {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 14px;
+  height: 100%;
+  z-index: 38;
+}
+.side-peek {
+  position: fixed;
+  top: 52px;
+  left: 6px;
+  bottom: 52px;
+  z-index: 39;
+  display: flex;
+  animation: side-peek-in 0.16s ease-out;
+}
+.sidebar.floating {
+  height: 100%;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  padding-top: 0;
+}
+.sidebar.floating .drag-strip {
+  display: none;
+}
+@keyframes side-peek-in {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .side-peek {
+    animation: none;
+  }
+}
+.tree-name.openable {
+  cursor: pointer;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+.tree-name.openable:hover {
+  text-decoration: underline;
+  text-decoration-color: var(--ink-3);
+}
+
+/* ---------- folder view ---------- */
+.folder-bar {
+  align-items: center;
+  flex-wrap: wrap;
+}
+.folder-bar .push {
+  flex: 1;
+}
+.folder-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.folder-sort select {
+  height: 30px;
+  padding: 0 8px;
+}
+.folder-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+.folder-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 14px;
+  min-height: 108px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.folder-card:hover {
+  border-color: var(--line-2);
+  background: var(--hover);
+}
+.folder-card b {
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.folder-card-icon {
+  color: var(--ink-3);
+}
+.folder-view .dragging {
+  opacity: 0.45;
+}
+.folder-view .list-row.drop-before {
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+.folder-view .folder-card.drop-before {
+  box-shadow: -3px 0 0 var(--accent);
+}
+
+/* ---------- find & replace ---------- */
+.find-dock {
+  position: sticky;
+  top: 10px;
+  height: 0;
+  z-index: 30;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+}
+.find-bar {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 6px 6px 6px 4px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: var(--shadow-lg);
+  font-size: 13px;
+  max-width: calc(100vw - 32px);
+}
+.find-toggle {
+  margin-top: 3px;
+  transition: transform 0.15s;
+}
+.find-toggle.open {
+  transform: rotate(90deg);
+}
+.find-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.find-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.find-input {
+  display: flex;
+  align-items: center;
+  width: 250px;
+  height: 28px;
+  padding: 0 3px 0 8px;
+  border: 1px solid var(--line-2);
+  border-radius: 7px;
+  background: var(--paper);
+}
+.find-input:focus-within {
+  border-color: var(--ink-3);
+}
+.find-input.bad {
+  border-color: #dc2626;
+}
+.find-input input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+}
+.find-opt {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 5px;
+  background: none;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+.find-opt.word {
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.find-opt:hover {
+  background: var(--hover);
+}
+.find-opt.on {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.find-count {
+  min-width: 76px;
+  padding: 0 4px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  white-space: nowrap;
+}
+.find-count.none {
+  color: #dc2626;
+}
+.find-sep {
+  width: 1px;
+  height: 18px;
+  margin: 0 2px;
+  background: var(--line);
+}
+.find-bar .btn.xs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 8px;
+  font-size: 12.5px;
+}
+.btn-icon.danger:not(:disabled):hover {
+  color: #dc2626;
+}
+.ob-find {
+  background: rgba(232, 176, 74, 0.35);
+  border-radius: 2px;
+}
+.ob-find-current {
+  background: rgba(232, 176, 74, 0.85);
+  box-shadow: 0 0 0 1px rgba(194, 120, 12, 0.6);
+}
+
+/* ---------- block selection by rectangle ---------- */
+.ob-marquee {
+  position: fixed;
+  z-index: 60;
+  pointer-events: none;
+  border: 1px solid rgba(194, 65, 12, 0.55);
+  background: rgba(194, 65, 12, 0.08);
+  border-radius: 3px;
+}
+body.marquee-on,
+body.marquee-on * {
+  user-select: none !important;
+  cursor: default;
+}
+.ProseMirror > .ob-block-picking,
+.ProseMirror > .ob-block-selected {
+  background: var(--accent-soft);
+  border-radius: 4px;
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.ProseMirror > .ob-block-selected ::selection,
+.ProseMirror > .ob-block-selected::selection {
+  background: transparent;
+}

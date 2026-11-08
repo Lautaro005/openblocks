@@ -24,7 +24,7 @@ import { api, dirOf, fileUrl, stem } from "./lib/api";
 import { isMac, setSidebar, useStore } from "./lib/store";
 import { t } from "./lib/i18n";
 import { renderMd } from "./lib/render";
-import { Sidebar } from "./components/Sidebar";
+import { Sidebar, SidebarPeek } from "./components/Sidebar";
 import { PageView, type SaveState } from "./components/PageView";
 import { AiPanel } from "./components/AiPanel";
 import { PreviewPanel, FloatingPreview } from "./components/Preview";
@@ -98,8 +98,12 @@ export function App() {
   const r = st.route;
   const panel = st.panel;
   return (
-    <div className={`shell ${st.sidebar ? "" : "no-sidebar"} ${panel ? "has-panel" : ""}`}>
+    <div
+      className={`shell ${st.sidebar ? "" : "no-sidebar"} ${panel ? "has-panel" : ""}`}
+      style={{ ["--side-w" as any]: `${st.sideWidth}px` }}
+    >
       {st.sidebar && <Sidebar />}
+      {!st.sidebar && <SidebarPeek />}
       <main className="main">
         <TopBar save={save} />
         <div className="content" id="content">
@@ -152,7 +156,7 @@ function TopBar({ save }: { save: { s: SaveState; at?: number } }) {
     if (!path) return;
     const family = await api.family().catch(() => null);
     const items: MenuItem[] = [
-      { label: t("Copiar enlace [[ ]]"), icon: LinkSimple, run: () => navigator.clipboard.writeText(`[[${stem(path)}]]`) },
+      { label: t("Copiar enlace [[ ]]"), icon: LinkSimple, run: () => navigator.clipboard.writeText(st.linkTo(path)) },
       { label: t("Historial de versiones"), icon: ClockCounterClockwise, run: () => st.setPanel({ kind: "history", path }) },
       { sep: true },
       { title: t("Exportar") },
@@ -213,7 +217,12 @@ function TopBar({ save }: { save: { s: SaveState; at?: number } }) {
   return (
     <header className="topbar" data-tauri-drag-region>
       {!st.sidebar && (
-        <button className="btn-icon" onClick={() => setSidebar(true)} title={t("Mostrar la barra lateral")}>
+        <button
+          className="btn-icon"
+          onClick={() => setSidebar(true)}
+          onMouseEnter={() => useStore.setState({ peek: true })}
+          title={t("Mostrar la barra lateral")}
+        >
           <SidebarSimple size={18} />
         </button>
       )}

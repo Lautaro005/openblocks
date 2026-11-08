@@ -28,7 +28,7 @@ import {
   FileZip,
 } from "@phosphor-icons/react";
 import { api, type ImportStatus } from "../lib/api";
-import { mod, useStore } from "../lib/store";
+import { isMac, mod, useStore } from "../lib/store";
 import { t } from "../lib/i18n";
 import { Brand } from "./Brand";
 import { ModelPicker } from "./AiPanel";
@@ -934,6 +934,8 @@ function Keys() {
     ["@", "Sumar una página al chat"],
     [`${mod} B · I · E`, "Negrita · cursiva · código"],
     [`${mod} ⇧ H`, "Resaltar"],
+    [`${mod} F`, "Buscar en la página"],
+    [isMac ? `${mod} ⌥ F` : `${mod} H`, "Buscar y reemplazar"],
     [`${mod} ⌥ 1 · 2 · 3`, "Títulos"],
     ["Esc", "Cerrar menús y ventanas"],
   ];

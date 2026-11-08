@@ -71,7 +71,10 @@ import { api, dirOf, stream, type Page } from "../lib/api";
 import { docToMd, mdToHtml } from "../lib/markdown";
 import { renderMd } from "../lib/render";
 import { t } from "../lib/i18n";
-import { useStore } from "../lib/store";
+import { isMac, useStore } from "../lib/store";
+import { FindReplace, findState } from "./find";
+import { BlockSelection, attachMarquee } from "./marquee";
+import { FindBar } from "./FindBar";
 import { Callout, Embed, Shortcuts, SlashCommand, TagHighlight, WikiLink, WikiSuggest, usePopup, type SuggestItem } from "./extensions";
 import { slashItems } from "./slash";
 import { matchCombo, showCombo } from "../lib/keys";
@@ -132,6 +135,7 @@ export const Editor = forwardRef<EditorHandle, Props>(function Editor({ page, on
   const [aiBox, setAiBox] = useState<null | { action: string; label: string; text: string; done: boolean; error?: string; from: number; to: number }>(null);
   const [tplMenu, setTplMenu] = useState<null | { items: { path: string; title: string }[] }>(null);
   const [ask, setAsk] = useState<null | AskState>(null);
+  const [find, setFind] = useState<null | { replace: boolean; seed: string; n: number }>(null);
   const openAskRef = useRef<() => void>(() => {});
   const askAbort = useRef<AbortController | null>(null);
 
@@ -168,6 +172,8 @@ export const Editor = forwardRef<EditorHandle, Props>(function Editor({ page, on
       TableCell,
       Details.configure({ persist: false, HTMLAttributes: { class: "toggle" } }),
       DetailsSummary,
+      FindReplace,
+      BlockSelection,
       DetailsContent,
       Highlight,
       TagHighlight.configure({ onOpen: (tag: string) => useStore.getState().go({ kind: "tag", tag }) }),
@@ -176,9 +182,12 @@ export const Editor = forwardRef<EditorHandle, Props>(function Editor({ page, on
       WikiLink.configure({
         exists: (target: string) => useStore.getState().exists(target),
         onOpen: async (target: string) => {
-          const r = await api.resolve(target).catch(() => ({ path: null }));
+          const r = await api.resolve(target).catch(() => ({ path: null }) as { path: string | null; kind?: "page" | "file" | "folder" });
           const st = useStore.getState();
+          // The tree knows the page too, in case the server's index is behind.
+          const local = r.path ? null : st.pagePath(target);
           if (r.path) st.openPath(r.path, r.kind);
+          else if (local) st.openPath(local, "page");
           else {
             // Following a link to a page that does not exist creates it, like Obsidian.
             const name = target.split("/").pop() || target;
@@ -476,13 +485,46 @@ export const Editor = forwardRef<EditorHandle, Props>(function Editor({ page, on
     setAiBox(null);
   };
 
+  // Dragging from outside the text draws a rectangle that selects blocks.
+  useEffect(() => {
+    const c = document.getElementById("content");
+    if (!editor || !c) return;
+    return attachMarquee(editor, c);
+  }, [editor]);
+
+  // ⌘F / Ctrl+F finds in the page; ⌘⌥F / Ctrl+H also replaces. The selected text is the search.
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => {
+      const m = isMac ? e.metaKey : e.ctrlKey;
+      if (!m || !editor) return;
+      const key = e.key.toLowerCase();
+      const replace = (key === "f" && e.altKey) || (!isMac && key === "h");
+      if (key !== "f" && !replace) return;
+      if (useStore.getState().settingsTab || useStore.getState().palette) return;
+      e.preventDefault();
+      const { from, to } = editor.state.selection;
+      const sel = from !== to ? editor.state.doc.textBetween(from, to, " ").slice(0, 200) : "";
+      setFind((f) => ({ replace: replace || !!f?.replace, seed: sel.includes("\n") ? "" : sel || f?.seed || "", n: (f?.n ?? 0) + 1 }));
+    };
+    window.addEventListener("keydown", k);
+    return () => window.removeEventListener("keydown", k);
+  }, [editor]);
+
   return (
     <div className="editor-wrap" ref={wrap}>
+      {find && editor && (
+        <div className="find-dock">
+          <FindBar editor={editor} replace={find.replace} seed={find.seed} n={find.n} onClose={() => setFind(null)} />
+        </div>
+      )}
       <BlockHandle editor={editor} wrap={wrap} onAsk={(md) => useStore.getState().askAI(md ? `> ${md.split("\n").join("\n> ")}\n\n` : "")} />
       <EditorContent editor={editor} />
       <BubbleMenu editor={editor} options={{ placement: "top", offset: 8 }} shouldShow={({ editor, state }) => {
         const { from, to } = state.selection;
         if (from === to || state.selection instanceof NodeSelection) return false;
+        // While finding, the selection jumps between matches: no format bar for that.
+        const f = findState(state);
+        if (f?.query && f.matches[f.index]?.from === from && f.matches[f.index]?.to === to) return false;
         return !editor.isActive("codeBlock");
       }}>
         <FormatBar editor={editor} onAI={runAI} />

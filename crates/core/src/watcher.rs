@@ -37,7 +37,13 @@ pub fn start(v: Arc<Vault>, tx: broadcast::Sender<Event>) -> notify::Result<Hand
             let Some(v) = weak.upgrade() else { return };
             let mut paths: Vec<PathBuf> = vec![];
             let mut shape = false;
+            let mut rescan = false;
             for e in batch.into_iter().flatten() {
+                // The system dropped events (too many at once): read the whole vault again.
+                if e.need_rescan() {
+                    rescan = true;
+                    continue;
+                }
                 use notify::EventKind::*;
                 if matches!(e.kind, Create(_) | Remove(_))
                     || matches!(e.kind, Modify(notify::event::ModifyKind::Name(_)))
@@ -52,6 +58,10 @@ pub fn start(v: Arc<Vault>, tx: broadcast::Sender<Event>) -> notify::Result<Hand
                         paths.push(p);
                     }
                 }
+            }
+            if rescan {
+                v.reindex();
+                let _ = tx.send(Event::Tree);
             }
             let mut changed = vec![];
             for p in paths {

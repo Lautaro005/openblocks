@@ -1,4 +1,4 @@
-import { useState, type DragEvent } from "react";
+import { useEffect, useRef, useState, type DragEvent } from "react";
 import {
   MagnifyingGlass,
   Sparkle,
@@ -24,13 +24,70 @@ import {
   FolderOpen as FolderNotchOpen,
 } from "@phosphor-icons/react";
 import { api, dirOf, stem, type TreeNode } from "../lib/api";
-import { mod, setSidebar, useStore } from "../lib/store";
+import { mod, setSidebar, setSidebarWidth, useStore } from "../lib/store";
 import { t } from "../lib/i18n";
 import { FileIcon } from "./FileIcon";
 import { openMenu, openMenuAt, type MenuItem } from "./Menu";
 import { Logo } from "./Logo";
 
-export function Sidebar() {
+/** While the sidebar is hidden: a thin strip on the left edge that shows it floating over the page. */
+export function SidebarPeek() {
+  const peek = useStore((s) => s.peek);
+  const timer = useRef<number | undefined>(undefined);
+  const show = () => {
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => useStore.setState({ peek: true }), 80);
+  };
+  const hide = () => {
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => {
+      // Keep it while a menu or a rename from the sidebar is open.
+      if (document.querySelector(".menu.context") || useStore.getState().renaming) return hide();
+      useStore.setState({ peek: false });
+    }, 300);
+  };
+  useEffect(() => () => window.clearTimeout(timer.current), []);
+  return (
+    <>
+      <div className="side-peek-zone" onMouseEnter={show} onMouseLeave={() => !peek && window.clearTimeout(timer.current)} />
+      {peek && (
+        <div className="side-peek" onMouseEnter={() => window.clearTimeout(timer.current)} onMouseLeave={hide}>
+          <Sidebar floating />
+        </div>
+      )}
+    </>
+  );
+}
+
+function Resizer() {
+  const start = (e: React.PointerEvent) => {
+    e.preventDefault();
+    const x0 = e.clientX;
+    const w0 = useStore.getState().sideWidth;
+    document.body.classList.add("resizing-side");
+    const move = (ev: PointerEvent) => setSidebarWidth(w0 + ev.clientX - x0, false);
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      document.body.classList.remove("resizing-side");
+      setSidebarWidth(useStore.getState().sideWidth);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  };
+  return (
+    <div
+      className="side-resize"
+      onPointerDown={start}
+      onDoubleClick={() => setSidebarWidth(264)}
+      role="separator"
+      aria-orientation="vertical"
+      title={t("Arrastrá para cambiar el ancho · doble clic para volver al original")}
+    />
+  );
+}
+
+export function Sidebar({ floating = false }: { floating?: boolean }) {
   const st = useStore();
   const vault = st.status?.vault;
   const [over, setOver] = useState<string | null>(null);
@@ -106,7 +163,8 @@ export function Sidebar() {
 
   const route = st.route;
   return (
-    <aside className="sidebar" onDragOver={(e) => e.preventDefault()}>
+    <aside className={`sidebar ${floating ? "floating" : ""}`} onDragOver={(e) => e.preventDefault()}>
+      {!floating && <Resizer />}
       <div className="drag-strip" data-tauri-drag-region />
       <div className="side-top">
         <button className="vault-btn" onClick={(e) => vaultMenu(e.currentTarget)}>
@@ -114,7 +172,11 @@ export function Sidebar() {
           <span className="vault-name">{vault?.name ?? "OpenBlocks"}</span>
           <CaretUpDown size={13} className="muted" />
         </button>
-        <button className="btn-icon" onClick={() => setSidebar(false)} title={t("Ocultar la barra lateral") + ` (${mod}\\)`}>
+        <button
+          className="btn-icon"
+          onClick={() => setSidebar(floating)}
+          title={floating ? t("Fijar la barra lateral") + ` (${mod}\\)` : t("Ocultar la barra lateral") + ` (${mod}\\)`}
+        >
           <SidebarSimple size={18} />
         </button>
       </div>
@@ -219,13 +281,13 @@ function Tree({
   return (
     <>
       {nodes.map((n) => (
-        <TreeItem key={n.path} n={n} depth={depth} over={over} setOver={setOver} dropOn={dropOn} />
+        <TreeItem key={n.path} n={n} siblings={nodes} depth={depth} over={over} setOver={setOver} dropOn={dropOn} />
       ))}
     </>
   );
 }
 
-function TreeItem({ n, depth, over, setOver, dropOn }: { n: TreeNode; depth: number; over: string | null; setOver: (s: string | null) => void; dropOn: (e: DragEvent, folder: string) => void }) {
+function TreeItem({ n, siblings, depth, over, setOver, dropOn }: { n: TreeNode; siblings: TreeNode[]; depth: number; over: string | null; setOver: (s: string | null) => void; dropOn: (e: DragEvent, folder: string) => void }) {
   const st = useStore();
   const collapsed = st.collapsed.includes(n.path);
   const isDb = st.databases.includes(n.path);
@@ -257,9 +319,21 @@ function TreeItem({ n, depth, over, setOver, dropOn }: { n: TreeNode; depth: num
     }
   };
 
+  // A folder opens its own page when there is one with the same name, inside it or next to it (how
+  // Notion pages with subpages come in); otherwise its folder view.
+  const open = () => {
+    if (n.kind !== "folder") return st.openPath(n.path, n.kind);
+    const same = (c: TreeNode) => c.kind === "page" && c.name.toLowerCase() === n.name.toLowerCase();
+    const own = n.children?.find(same) ?? siblings.find(same);
+    if (own && !isDb) st.openPath(own.path, "page");
+    else st.go({ kind: "folder", path: n.path });
+  };
+
   const menu = (e: React.MouseEvent) => {
     const fav = st.favorites.includes(n.path);
-    const items: MenuItem[] = [];
+    const items: MenuItem[] = [{ label: t("Abrir"), icon: ArrowSquareOut, run: open }];
+    if (n.kind === "folder") items.push({ label: collapsed ? t("Desplegar") : t("Plegar"), icon: CaretRight, run: toggle });
+    items.push({ sep: true });
     if (n.kind === "folder") {
       items.push({ label: t("Nueva página"), icon: Plus, run: () => st.newPage(n.path) });
       items.push({ label: t("Nueva carpeta"), icon: FolderSimplePlus, run: () => newFolder(n.path) });
@@ -338,12 +412,10 @@ function TreeItem({ n, depth, over, setOver, dropOn }: { n: TreeNode; depth: num
         }}
         onClick={() => {
           if (renaming) return;
-          if (n.kind === "folder") {
-            if (isDb) st.go({ kind: "folder", path: n.path });
-            else toggle();
-          } else st.openPath(n.path, n.kind);
+          // The row expands or collapses a folder; its name opens it.
+          if (n.kind === "folder") toggle();
+          else open();
         }}
-        onDoubleClick={() => n.kind === "folder" && st.go({ kind: "folder", path: n.path })}
         onContextMenu={menu}
         role="treeitem"
         aria-expanded={n.kind === "folder" ? !collapsed : undefined}
@@ -376,7 +448,16 @@ function TreeItem({ n, depth, over, setOver, dropOn }: { n: TreeNode; depth: num
             }}
           />
         ) : (
-          <span className="tree-name">{n.name}</span>
+          <span
+            className={`tree-name ${n.kind === "folder" ? "openable" : ""}`}
+            onClick={(e) => {
+              if (n.kind !== "folder" || renaming) return;
+              e.stopPropagation();
+              open();
+            }}
+          >
+            {n.name}
+          </span>
         )}
         <span className="tree-actions">
           {n.kind === "folder" && (

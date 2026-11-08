@@ -2,6 +2,36 @@
 
 All notable changes to OpenBlocks. Dates are YYYY-MM-DD.
 
+## [0.1.2] — 2026-11-08
+
+### Fixed
+- **Links, search and the graph lost pages from big folders.** When macOS reported a change on a folder (after
+  an import, or Finder touching it), the index dropped every page inside it: links to those pages created new empty
+  pages instead of opening them, search found nothing and the graph was empty. Folder changes now re-read the folder,
+  and the index rebuilds itself when the system drops events. Clicking a link also falls back to the sidebar's list of
+  pages, so it never creates a page that already exists.
+- "Copy link" in the ⋯ menu writes the page's full path when another page has the same name (common in Notion
+  imports), so the link always opens the right page.
+
+### Sidebar
+- Drag its edge to make it wider or narrower (double-click to reset); the width is remembered.
+- With the sidebar hidden, move the mouse to the left edge of the window (or over the show button) and it appears
+  floating over the page; it hides again when the mouse leaves. The button in it pins it back.
+- Clicking a folder's **name** (underlined on hover) opens it: its own page when it has one with the same name — as
+  pages with subpages come from Notion — or the folder view. Clicking the rest of the row expands or collapses it.
+  **Open** is the first option of the right-click menu, followed by Expand/Collapse.
+
+### Folders
+- The folder view sorts by name, last edit or type (ascending or descending) or by hand — drag the items into the
+  order you want — and shows a list or a grid of cards with item counts and dates. Saved per folder.
+
+### Editor
+- **Find and replace** with `⌘F` / `Ctrl+F` (`⌘⌥F` / `Ctrl+H` opens it with replace): matches highlighted in the page,
+  `↵`/`⇧↵` to move between them, match case, whole word and regular expressions (with `$1` in replacements),
+  replace one or all, delete every match, or delete the blocks that contain them. Each action is one undo step.
+- **Select blocks like files on a desktop:** press outside the text (the page margins, under the last block) and drag a
+  rectangle. Every block it touches is selected: delete or cut them, copy, format them, or ask the AI. `Esc` clears it.
+
 ## [0.1.1] — 2026-11-03
 
 ### Import from Notion

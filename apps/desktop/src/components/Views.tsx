@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, CalendarDots, Sparkle, Graph, ArrowCounterClockwise, Trash, FileText, Hash, Folder, MagnifyingGlass, Table } from "@phosphor-icons/react";
+import { Plus, CalendarDots, Sparkle, Graph, ArrowCounterClockwise, Trash, FileText, Hash, Folder, MagnifyingGlass, Table, SortAscending, SortDescending, ListBullets, SquaresFour } from "@phosphor-icons/react";
 import { api, stem } from "../lib/api";
 import { mod, useStore } from "../lib/store";
 import { t, timeAgo, getLang } from "../lib/i18n";
@@ -167,22 +167,57 @@ export function TagView({ tag }: { tag: string }) {
 }
 
 /** A folder that is not a database: its pages and files as a list, with a button to turn it into one. */
+type FolderItem = { path: string; name: string; kind: "folder" | "page" | "file"; mtime: number; size: number; count: number };
+type FolderViewCfg = { layout?: "list" | "grid"; sort?: "name" | "mtime" | "kind" | "manual"; dir?: 1 | -1; order?: string[] };
+
+const KIND_RANK = { folder: 0, page: 1, file: 2 } as const;
+
+function sortItems(items: FolderItem[], v: FolderViewCfg): FolderItem[] {
+  const dir = v.dir ?? 1;
+  const by = v.sort ?? "name";
+  const name = (a: FolderItem, b: FolderItem) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" });
+  if (by === "manual") {
+    const pos = new Map((v.order ?? []).map((p, i) => [p, i]));
+    // Items not placed by hand yet go at the end, by name.
+    return [...items].sort((a, b) => (pos.get(a.path) ?? 1e9) - (pos.get(b.path) ?? 1e9) || name(a, b));
+  }
+  return [...items].sort((a, b) => {
+    if (by === "mtime") return dir * (a.mtime - b.mtime) || name(a, b);
+    if (by === "kind") return dir * (KIND_RANK[a.kind] - KIND_RANK[b.kind]) || name(a, b);
+    return KIND_RANK[a.kind] === 0 && KIND_RANK[b.kind] !== 0 ? -1 : KIND_RANK[b.kind] === 0 && KIND_RANK[a.kind] !== 0 ? 1 : dir * name(a, b);
+  });
+}
+
 export function FolderView({ path }: { path: string }) {
   const st = useStore();
-  const find = (nodes: any[]): any => {
-    for (const n of nodes) {
-      if (n.path === path) return n;
-      if (n.children) {
-        const f = find(n.children);
-        if (f) return f;
-      }
-    }
+  const [data, setData] = useState<{ items: FolderItem[]; view: FolderViewCfg | null } | null>(null);
+  const [drag, setDrag] = useState<string | null>(null);
+  const [over, setOver] = useState<string | null>(null);
+  useEffect(() => {
+    api.folder(path).then(setData).catch((e) => st.toast(e.message, "error"));
+  }, [path, st.tree]);
+  const view: FolderViewCfg = data?.view ?? {};
+  const save = (v: FolderViewCfg) => {
+    setData((d) => (d ? { ...d, view: v } : d));
+    api.folderView(path, v).catch((e) => st.toast(e.message, "error"));
   };
-  const node = find(st.tree);
+  const items = data ? sortItems(data.items, view) : [];
+  const layout = view.layout ?? "list";
+  const sort = view.sort ?? "name";
+  const dropOnItem = (target: string) => {
+    if (!drag || drag === target) return;
+    const order = items.map((i) => i.path).filter((p) => p !== drag);
+    order.splice(order.indexOf(target), 0, drag);
+    save({ ...view, sort: "manual", order });
+  };
+  const icon = (n: FolderItem, size: number) =>
+    n.kind === "folder" ? <Folder size={size} /> : n.kind === "page" ? <FileText size={size} /> : <FileIcon path={n.path} size={size} />;
+  const meta = (n: FolderItem) =>
+    n.kind === "folder" ? t(n.count === 1 ? "{n} elemento" : "{n} elementos", { n: n.count }) : timeAgo(n.mtime);
   return (
-    <div className="plain-view">
+    <div className="plain-view folder-view">
       <h1>{stem(path)}</h1>
-      <div className="row-gap">
+      <div className="row-gap folder-bar">
         <button className="btn sm" onClick={() => st.newPage(path)}>
           <Plus size={14} /> {t("Nueva página")}
         </button>
@@ -195,16 +230,78 @@ export function FolderView({ path }: { path: string }) {
         >
           <Table size={14} /> {t("Ver como base de datos")}
         </button>
+        <div className="push" />
+        <label className="folder-sort">
+          <span className="muted xs">{t("Ordenar")}</span>
+          <select className="input sm" value={sort} onChange={(e) => save({ ...view, sort: e.target.value as FolderViewCfg["sort"] })}>
+            <option value="name">{t("Nombre")}</option>
+            <option value="mtime">{t("Última edición")}</option>
+            <option value="kind">{t("Tipo")}</option>
+            <option value="manual">{t("A mano (arrastrar)")}</option>
+          </select>
+        </label>
+        {sort !== "manual" && (
+          <button
+            className="btn-icon sm"
+            title={(view.dir ?? 1) === 1 ? t("Ascendente") : t("Descendente")}
+            onClick={() => save({ ...view, dir: (view.dir ?? 1) === 1 ? -1 : 1 })}
+          >
+            {(view.dir ?? 1) === 1 ? <SortAscending size={16} /> : <SortDescending size={16} />}
+          </button>
+        )}
+        <div className="seg">
+          <button className={layout === "list" ? "on" : ""} title={t("Lista")} onClick={() => save({ ...view, layout: "list" })}>
+            <ListBullets size={15} />
+          </button>
+          <button className={layout === "grid" ? "on" : ""} title={t("Cuadrícula")} onClick={() => save({ ...view, layout: "grid" })}>
+            <SquaresFour size={15} />
+          </button>
+        </div>
       </div>
-      <div className="list">
-        {(node?.children ?? []).map((n: any) => (
-          <button key={n.path} className="list-row" onClick={() => st.openPath(n.path, n.kind)}>
-            {n.kind === "folder" ? <Folder size={16} /> : n.kind === "page" ? <FileText size={16} /> : <FileIcon path={n.path} size={16} />}
-            <div className="list-main">
-              <b>{n.name}</b>
-            </div>
+      {sort === "manual" && <p className="muted xs">{t("Arrastrá los elementos para ordenarlos.")}</p>}
+      <div className={layout === "grid" ? "folder-grid" : "list"}>
+        {items.map((n) => (
+          <button
+            key={n.path}
+            className={`${layout === "grid" ? "folder-card" : "list-row"} ${over === n.path && drag && drag !== n.path ? "drop-before" : ""} ${drag === n.path ? "dragging" : ""}`}
+            draggable
+            onDragStart={(e) => {
+              setDrag(n.path);
+              e.dataTransfer.effectAllowed = "move";
+              e.dataTransfer.setData("application/x-ob-order", n.path);
+            }}
+            onDragEnd={() => (setDrag(null), setOver(null))}
+            onDragOver={(e) => {
+              if (!drag) return;
+              e.preventDefault();
+              setOver(n.path);
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              dropOnItem(n.path);
+              setDrag(null);
+              setOver(null);
+            }}
+            onClick={() => st.openPath(n.path, n.kind)}
+          >
+            {layout === "grid" ? (
+              <>
+                <span className="folder-card-icon">{icon(n, 26)}</span>
+                <b>{n.name}</b>
+                <span className="muted xs">{meta(n)}</span>
+              </>
+            ) : (
+              <>
+                {icon(n, 16)}
+                <div className="list-main">
+                  <b>{n.name}</b>
+                </div>
+                <span className="muted xs">{meta(n)}</span>
+              </>
+            )}
           </button>
         ))}
+        {data && !items.length && <p className="muted">{t("Vacía")}</p>}
       </div>
     </div>
   );

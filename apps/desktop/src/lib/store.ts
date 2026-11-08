@@ -32,6 +32,9 @@ type State = {
   palette: null | "all" | "pages";
   settingsTab: string | null;
   sidebar: boolean;
+  /** The sidebar shown over the page while it is hidden (mouse on the left edge). */
+  peek: boolean;
+  sideWidth: number;
   toasts: Toast[];
   models: Model[];
   /** Bumped when files change on disk, with which ones. */
@@ -57,7 +60,19 @@ type State = {
   toast(text: string, kind?: Toast["kind"], action?: Toast["action"]): void;
   dismiss(id: number): void;
   exists(target: string): boolean;
+  /** The page a link target points to, from the tree (used when the server cannot say). */
+  pagePath(target: string): string | null;
+  /** A `[[link]]` to a page: just the name when it is unique, the full path otherwise. */
+  linkTo(path: string): string;
 };
+
+function pagesOf(tree: TreeNode[], out: TreeNode[] = []) {
+  for (const n of tree) {
+    if (n.kind === "page") out.push(n);
+    if (n.children) pagesOf(n.children, out);
+  }
+  return out;
+}
 
 let toastId = 0;
 
@@ -117,6 +132,8 @@ export const useStore = create<State>((set, get) => ({
   palette: null,
   settingsTab: null,
   sidebar: LS.get("ob-sidebar") !== "0",
+  peek: false,
+  sideWidth: Math.min(480, Math.max(200, Number(LS.get("ob-side-w")) || 264)),
   toasts: [],
   models: [],
   external: { n: 0, paths: [] },
@@ -260,6 +277,23 @@ export const useStore = create<State>((set, get) => ({
     set((s) => ({ toasts: s.toasts.filter((x) => x.id !== id) }));
   },
 
+  pagePath(target) {
+    const k = target.split("#")[0].trim().replace(/^\.?\//, "").toLowerCase().replace(/\.md$/, "");
+    if (!k) return null;
+    const pages = pagesOf(get().tree);
+    const exact = pages.find((p) => p.path.toLowerCase().replace(/\.md$/, "") === k);
+    if (exact) return exact.path;
+    const tail = pages.filter((p) => p.path.toLowerCase().replace(/\.md$/, "").endsWith("/" + k) || p.name.toLowerCase() === k);
+    tail.sort((a, b) => a.path.length - b.path.length);
+    return tail[0]?.path ?? null;
+  },
+
+  linkTo(path) {
+    const name = stem(path);
+    const same = pagesOf(get().tree).filter((p) => p.name.toLowerCase() === name.toLowerCase()).length;
+    return same > 1 ? `[[${path.replace(/\.md$/i, "")}|${name}]]` : `[[${name}]]`;
+  },
+
   exists(target) {
     const k = target.toLowerCase().replace(/\.md$/, "");
     const n = get().names;
@@ -267,9 +301,15 @@ export const useStore = create<State>((set, get) => ({
   },
 }));
 
+export function setSidebarWidth(w: number, save = true) {
+  const width = Math.round(Math.min(480, Math.max(200, w)));
+  if (save) LS.set("ob-side-w", String(width));
+  useStore.setState({ sideWidth: width });
+}
+
 export function setSidebar(open: boolean) {
   LS.set("ob-sidebar", open ? "1" : "0");
-  useStore.setState({ sidebar: open });
+  useStore.setState({ sidebar: open, peek: false });
 }
 
 export const isMac = /Mac|iPhone|iPad/.test(navigator.platform) || document.documentElement.dataset.desktop === "mac";

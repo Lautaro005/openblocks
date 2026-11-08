@@ -11,6 +11,8 @@
 - Data: pages in the vault; history, trash and chats in `<vault>/.openblocks/`; settings in `~/.openblocks/settings.json`
 - Markdown: `[[wikilinks]]`, `![[embeds]]`, `> [!note]` callouts, `- [ ]` tasks, `==highlights==`, `#tags`, YAML frontmatter properties, `<details>` toggles
 - MCP tools: search_pages, read_page, list_pages, backlinks, create_page, edit_page, set_property (+ web_search, web_fetch, brain_search, lumina_search with `--with`)
+- Editor: ⌘F / Ctrl+F find and replace (case, whole word, regex); drag a rectangle from the margin to select blocks
+- Sidebar: resizable, floats over the page when hidden; folders open by name and sort by name, date, type or by hand
 - Import from Notion: Settings → Import (integration token or the `.zip` export) into a new vault folder
 - No accounts, no telemetry, no servers of its own
 

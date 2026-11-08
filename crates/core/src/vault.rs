@@ -35,6 +35,8 @@ pub struct VaultConfig {
     pub databases: HashMap<String, Value>,
     /// Folders the user collapsed in the tree.
     pub collapsed: Vec<String>,
+    /// How each folder's page lists its contents (layout, sort, manual order).
+    pub folders: HashMap<String, Value>,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -258,7 +260,7 @@ impl Vault {
             .min_depth(1)
             .follow_links(false)
             .into_iter()
-            .filter_entry(|e| !Self::skip(&e.file_name().to_string_lossy()))
+            .filter_entry(|e| e.depth() == 0 || !Self::skip(&e.file_name().to_string_lossy()))
             .flatten()
         {
             if !e.file_type().is_file() {
@@ -282,6 +284,12 @@ impl Vault {
     /// Refreshes one entry after it changed on disk (or drops it if it is gone).
     pub fn reindex_one(&self, rel: &str) {
         let Ok(abs) = self.abs(rel) else { return };
+        if abs.is_dir() {
+            // A folder event (macOS reports many of them) means "something inside changed":
+            // read the folder again instead of treating it as gone.
+            self.reindex_dir(rel, &abs);
+            return;
+        }
         let mut idx = self.index.write().unwrap();
         if abs.is_file() {
             if is_note(rel) {
@@ -299,6 +307,57 @@ impl Vault {
             idx.notes.retain(|k, _| !k.starts_with(&pre));
             idx.files.retain(|k| !k.starts_with(&pre));
         }
+    }
+
+    /// Re-reads everything under a folder: adds what is new and drops what is gone.
+    fn reindex_dir(&self, rel: &str, abs: &Path) {
+        let mut notes = HashMap::new();
+        let mut files = HashSet::new();
+        for e in walkdir::WalkDir::new(abs)
+            .min_depth(1)
+            .follow_links(false)
+            .into_iter()
+            .filter_entry(|e| e.depth() == 0 || !Self::skip(&e.file_name().to_string_lossy()))
+            .flatten()
+        {
+            if !e.file_type().is_file() {
+                continue;
+            }
+            let Some(r) = self.rel(e.path()) else {
+                continue;
+            };
+            if r.ends_with(".ob-tmp") {
+                continue;
+            }
+            if is_note(&r) {
+                // Unchanged pages keep their entry (no need to read them again).
+                let mt = mtime_of(e.path());
+                let known = self
+                    .index
+                    .read()
+                    .unwrap()
+                    .notes
+                    .get(&r)
+                    .filter(|m| m.mtime == mt)
+                    .cloned();
+                let meta = match known {
+                    Some(m) => m,
+                    None => match std::fs::read_to_string(e.path()) {
+                        Ok(t) => meta_from(&r, &t, mt),
+                        Err(_) => continue,
+                    },
+                };
+                notes.insert(r, meta);
+            } else {
+                files.insert(r);
+            }
+        }
+        let pre = format!("{rel}/");
+        let mut idx = self.index.write().unwrap();
+        idx.notes.retain(|k, _| !k.starts_with(&pre));
+        idx.files.retain(|k| !k.starts_with(&pre));
+        idx.notes.extend(notes);
+        idx.files.extend(files);
     }
 
     pub fn mark_written(&self, abs: &Path) {
@@ -390,6 +449,65 @@ impl Vault {
         });
         folders.extend(items);
         folders
+    }
+
+    /// A folder's direct contents with their dates and sizes, and its saved view.
+    pub fn folder_listing(&self, rel: &str) -> Result<Value> {
+        let rel = rel.trim_matches('/');
+        let abs = self.abs(rel)?;
+        let mut items = vec![];
+        for e in std::fs::read_dir(&abs)?.flatten() {
+            let name = e.file_name().to_string_lossy().into_owned();
+            if Self::skip(&name) || name.ends_with(".ob-tmp") {
+                continue;
+            }
+            let Ok(md) = e.metadata() else { continue };
+            let path = join_rel(rel, &name);
+            let (kind, title) = if md.is_dir() {
+                ("folder", name.clone())
+            } else if is_note(&name) {
+                ("page", stem(&name))
+            } else {
+                ("file", name.clone())
+            };
+            let count = if md.is_dir() {
+                std::fs::read_dir(e.path())
+                    .map(|r| {
+                        r.flatten()
+                            .filter(|x| !Self::skip(&x.file_name().to_string_lossy()))
+                            .count()
+                    })
+                    .unwrap_or(0)
+            } else {
+                0
+            };
+            items.push(json!({
+                "path": path, "name": title, "kind": kind,
+                "mtime": mtime_of(&e.path()), "size": md.len(), "count": count,
+            }));
+        }
+        let view = self
+            .config
+            .read()
+            .unwrap()
+            .folders
+            .get(rel)
+            .cloned()
+            .unwrap_or(Value::Null);
+        Ok(json!({"path": rel, "items": items, "view": view}))
+    }
+
+    pub fn set_folder_view(&self, rel: &str, view: Value) {
+        let rel = rel.trim_matches('/').to_string();
+        {
+            let mut c = self.config.write().unwrap();
+            if view.is_null() {
+                c.folders.remove(&rel);
+            } else {
+                c.folders.insert(rel, view);
+            }
+        }
+        self.save_config();
     }
 
     // ---------- pages ----------
@@ -1139,6 +1257,27 @@ mod tests {
         assert_eq!(t.len(), 1);
         let back = v.restore_trash(t[0]["id"].as_str().unwrap()).unwrap();
         assert_eq!(back, "Alpha.md");
+    }
+
+    #[test]
+    fn folder_events_keep_the_pages_inside() {
+        let dir = tempfile::tempdir().unwrap();
+        let v = Vault::open(dir.path(), Some("Test".into()), false).unwrap();
+        v.create_page("Notion/A", "Uno", "[[Notion/A/Dos|dos]]")
+            .unwrap();
+        v.create_page("Notion/A", "Dos", "").unwrap();
+        std::fs::write(dir.path().join("Notion/A/Tres.md"), "nueva").unwrap();
+        // A folder that still exists: re-read, nothing lost, new page found.
+        v.reindex_one("Notion");
+        assert_eq!(
+            v.resolve("Notion/A/Dos").as_deref(),
+            Some("Notion/A/Dos.md")
+        );
+        assert_eq!(v.resolve("Tres").as_deref(), Some("Notion/A/Tres.md"));
+        // A folder that is gone: its pages leave the index.
+        std::fs::remove_dir_all(dir.path().join("Notion/A")).unwrap();
+        v.reindex_one("Notion/A");
+        assert!(v.resolve("Uno").is_none());
     }
 
     #[test]
