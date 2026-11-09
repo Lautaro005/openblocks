@@ -112,6 +112,19 @@ pub fn definitions(ctx_edit: bool, pills: &[String], attachments: bool) -> Vec<V
             tool("delete",
                  "Moves a page, file or folder to the vault's trash (the user can restore it). Only delete what the user asked you to delete.",
                  json!({"path": {"type": "string"}}), &["path"]),
+            tool("write_artifact",
+                 "Creates or rewrites an HTML artifact: a self-contained page (HTML + CSS + JS in one file) the app shows inside, like a dashboard, chart, calculator, timeline or interactive explainer. Use it when the user asks for something visual or interactive. It runs sandboxed with no network: libraries load only from cdn.jsdelivr.net, cdnjs.cloudflare.com, unpkg.com or esm.sh (e.g. <script src=\"https://cdn.jsdelivr.net/npm/chart.js@4.4.1\"></script>), no fetch(). To show spreadsheet data, list the files in `data` (vault paths of .xlsx/.csv, e.g. from list_pages) and read them in the page with `openblocks.table(file?, sheet?)` (rows as objects keyed by the header row), `openblocks.rows(file?, sheet?)` (arrays), `openblocks.sheets(file?)` and `openblocks.files`; numbers come as numbers; the page updates when the spreadsheet changes. `openblocks.theme` is \"light\" or \"dark\" (also on <html data-theme>). Embed it in a page with ![[name.html]]. Returns its path.",
+                 json!({"path": {"type": "string", "description": "vault path ending in .html, e.g. Proyectos/Ventas.html; an existing file is rewritten"},
+                        "html": {"type": "string", "description": "the whole HTML document"},
+                        "data": {"type": "array", "items": {"type": "string"}, "description": "spreadsheets the page uses (vault paths)"}}),
+                 &["path", "html"]),
+            tool("write_spreadsheet",
+                 "Creates or rewrites a spreadsheet (.xlsx, or .csv/.tsv for one sheet) the user can edit in the app and artifacts can use as data. `sheets` is a list of {name, rows}; rows are arrays of cells (numbers as numbers, text as strings, null for empty); a string starting with = is a formula (e.g. \"=SUM(B2:B10)\"). Read an existing one first with read_page. Returns its path.",
+                 json!({"path": {"type": "string", "description": "vault path ending in .xlsx, .csv or .tsv"},
+                        "sheets": {"type": "array", "items": {"type": "object", "properties": {
+                            "name": {"type": "string"},
+                            "rows": {"type": "array", "items": {"type": "array", "items": {}}}}, "required": ["name", "rows"]}}}),
+                 &["path", "sheets"]),
         ]);
         if attachments {
             v.push(tool("save_attachment",
@@ -194,6 +207,25 @@ fn find(v: &Vault, p: &str) -> Result<String> {
         .ok_or_else(|| anyhow!("nothing called {p} in the vault (use search_pages or list_pages)"))
 }
 
+/// A vault path for a file an agent writes, with one of `exts` (`default` is added otherwise).
+fn new_file_path(v: &Vault, p: &str, exts: &[&str], default: &str) -> Result<String> {
+    let p = p.trim().trim_matches('/').replace('\\', "/");
+    if p.is_empty() {
+        bail!("empty path");
+    }
+    let ext = p
+        .rsplit_once('.')
+        .map(|(_, e)| e.to_ascii_lowercase())
+        .unwrap_or_default();
+    let p = if exts.contains(&ext.as_str()) {
+        p
+    } else {
+        format!("{p}.{default}")
+    };
+    v.abs(&p)?;
+    Ok(p)
+}
+
 fn attachment<'a>(ctx: &'a Ctx, name: &str) -> Result<&'a Attachment> {
     let n = name.trim();
     ctx.attachments
@@ -229,6 +261,8 @@ pub async fn exec(ctx: &Ctx, name: &str, args: &Value) -> Result<Output> {
             | "move"
             | "delete"
             | "save_attachment"
+            | "write_artifact"
+            | "write_spreadsheet"
     );
     if editing && !ctx.can_edit {
         bail!("editing is turned off: the user set agents to read only. Propose the change in your answer instead.");
@@ -446,6 +480,107 @@ pub async fn exec(ctx: &Ctx, name: &str, args: &Value) -> Result<Output> {
                 json!({"action": "delete", "path": p, "title": vault::stem(&p), "trash": id}),
             ))
         }
+        "write_artifact" => {
+            let rel = new_file_path(v, s(args, "path"), &["html", "htm"], "html")?;
+            let mut html = s(args, "html").to_string();
+            if html.trim().is_empty() {
+                bail!("empty html");
+            }
+            let data: Vec<String> = args["data"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(|x| x.as_str().map(|p| p.trim().to_string()))
+                .filter(|p| !p.is_empty())
+                .collect();
+            if !data.is_empty() {
+                html = crate::artifact::set_data_sources(&html, &data);
+            }
+            let existed = v.abs(&rel)?.exists();
+            let version = if existed {
+                version_before(v, &rel)?
+            } else {
+                None
+            };
+            v.write_raw(&rel, &html)?;
+            v.reindex_one(&rel);
+            let missing: Vec<&String> = data
+                .iter()
+                .filter(|d| crate::artifact::resolve_source(v, &rel, d).is_none())
+                .collect();
+            let note = if missing.is_empty() {
+                String::new()
+            } else {
+                format!(" (not found in the vault: {:?})", missing)
+            };
+            let title = rel.rsplit('/').next().unwrap_or(&rel).to_string();
+            Ok(changed(
+                format!(
+                    "{} {rel}{note}. Embed it with ![[{title}]]",
+                    if existed { "Rewrote" } else { "Created" }
+                ),
+                if existed {
+                    json!({"action": "edit", "path": rel, "title": title, "version": version})
+                } else {
+                    json!({"action": "create", "path": rel, "title": title})
+                },
+            ))
+        }
+        "write_spreadsheet" => {
+            let rel = new_file_path(v, s(args, "path"), &["xlsx", "csv", "tsv"], "xlsx")?;
+            let mut sheets = vec![];
+            for sh in args["sheets"].as_array().into_iter().flatten() {
+                let mut rows = vec![];
+                let mut formulas = serde_json::Map::new();
+                for (r, row) in sh["rows"].as_array().into_iter().flatten().enumerate() {
+                    let mut cells = vec![];
+                    for (c, cell) in row.as_array().into_iter().flatten().enumerate() {
+                        match cell.as_str() {
+                            Some(f) if f.starts_with('=') && f.len() > 1 => {
+                                formulas.insert(format!("{r},{c}"), json!(f));
+                                cells.push(Value::Null);
+                            }
+                            _ => cells.push(cell.clone()),
+                        }
+                    }
+                    rows.push(cells);
+                }
+                sheets.push(crate::sheet::SheetIn {
+                    name: sh["name"].as_str().unwrap_or("Hoja1").to_string(),
+                    rows,
+                    formulas,
+                });
+            }
+            if sheets.is_empty() {
+                bail!("no sheets");
+            }
+            let abs = v.abs(&rel)?;
+            let bytes = crate::sheet::encode(&abs, &sheets)?;
+            // Writing over a file: the old one goes to the trash, so Undo brings it back.
+            let trash = if abs.exists() {
+                Some(v.trash(&rel)?)
+            } else {
+                None
+            };
+            v.write_bytes(&rel, &bytes)?;
+            let title = rel.rsplit('/').next().unwrap_or(&rel).to_string();
+            Ok(changed(
+                format!(
+                    "{} {rel}",
+                    if trash.is_some() {
+                        "Rewrote"
+                    } else {
+                        "Created"
+                    }
+                ),
+                match trash {
+                    Some(id) => {
+                        json!({"action": "replace", "path": rel, "title": title, "trash": id})
+                    }
+                    None => json!({"action": "create", "path": rel, "title": title}),
+                },
+            ))
+        }
         "save_attachment" => {
             let a = attachment(ctx, s(args, "name"))?;
             let data = std::fs::read(&a.path)?;
@@ -513,5 +648,72 @@ pub async fn exec(ctx: &Ctx, name: &str, args: &Value) -> Result<Output> {
             }))
         }
         _ => bail!("unknown tool {name}"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn ctx(dir: &std::path::Path) -> Ctx {
+        Ctx {
+            vault: Arc::new(Vault::open(dir, None, false).unwrap()),
+            settings: Settings::default(),
+            can_edit: true,
+            pills: vec![],
+            attachments: vec![],
+        }
+    }
+
+    #[tokio::test]
+    async fn agents_write_spreadsheets_and_artifacts() {
+        let dir = tempfile::tempdir().unwrap();
+        let c = ctx(dir.path());
+        let r = exec(
+            &c,
+            "write_spreadsheet",
+            &json!({"path": "Datos/Ventas", "sheets": [{"name": "Hoja1", "rows": [["Mes", "Total"], ["Enero", 10], ["Suma", "=SUM(B2:B2)"]]}]}),
+        )
+        .await
+        .unwrap();
+        assert_eq!(r.edit.as_ref().unwrap()["path"], "Datos/Ventas.xlsx");
+        let book = crate::sheet::read(&dir.path().join("Datos/Ventas.xlsx")).unwrap();
+        assert_eq!(book["sheets"][0]["formulas"]["2,1"], "=SUM(B2:B2)");
+
+        let r = exec(
+            &c,
+            "write_artifact",
+            &json!({"path": "Datos/Panel.html", "html": "<!doctype html><html><head><meta charset=\"utf-8\"></head><body></body></html>", "data": ["Ventas.xlsx"]}),
+        )
+        .await
+        .unwrap();
+        assert_eq!(r.edit.as_ref().unwrap()["action"], "create");
+        let html = std::fs::read_to_string(dir.path().join("Datos/Panel.html")).unwrap();
+        assert_eq!(crate::artifact::data_sources(&html), vec!["Ventas.xlsx"]);
+        assert!(!r.text.contains("not found"));
+
+        // Writing a spreadsheet over an existing one keeps the old one in the trash for Undo.
+        let r = exec(
+            &c,
+            "write_spreadsheet",
+            &json!({"path": "Datos/Ventas.xlsx", "sheets": [{"name": "Hoja1", "rows": [["otro"]]}]}),
+        )
+        .await
+        .unwrap();
+        assert_eq!(r.edit.as_ref().unwrap()["action"], "replace");
+    }
+
+    #[tokio::test]
+    async fn read_only_agents_cant_write_artifacts() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut c = ctx(dir.path());
+        c.can_edit = false;
+        assert!(exec(
+            &c,
+            "write_artifact",
+            &json!({"path": "a.html", "html": "x"})
+        )
+        .await
+        .is_err());
     }
 }

@@ -41,6 +41,14 @@ export type Status = {
   platform: string;
 };
 
+export type Cell = string | number | boolean | null;
+export type Sheet = { name: string; rows: Cell[][]; formulas: Record<string, string> };
+export type SheetBook = { sheets: Sheet[]; writable: boolean };
+
+export const isHtml = (p: string) => /\.html?$/i.test(p);
+export const isSheet = (p: string) => /\.(xlsx|xlsm|xls|ods|csv|tsv)$/i.test(p);
+export const artifactUrl = (path: string, theme: string, n = 0) => "/api/artifact" + q({ path, theme, v: n || undefined });
+
 export class ApiError extends Error {
   status: number;
   constructor(msg: string, status: number) {
@@ -133,6 +141,14 @@ export const api = {
   upload: (folder: string, file: File) =>
     req<{ path: string; size: number }>("POST", "/api/upload" + q({ folder, name: file.name }), undefined, file),
   preview: (path: string) => req<any>("GET", "/api/preview" + q({ path })),
+  zoom: (factor: number) => req<{ native: boolean }>("POST", "/api/zoom", { factor }),
+  sheet: (path: string) => req<SheetBook>("GET", "/api/sheet" + q({ path })),
+  saveSheet: (path: string, sheets: Sheet[]) => req<{ ok: boolean }>("PUT", "/api/sheet" + q({ path }), { sheets }),
+  saveText: (path: string, text: string) => req<{ ok: boolean }>("PUT", "/api/text" + q({ path }), { text }),
+  artifactInfo: (path: string) => req<{ sources: { name: string; path: string | null }[] }>("GET", "/api/artifact/info" + q({ path })),
+  artifactData: (path: string, sources: string[]) => req<{ text: string }>("PUT", "/api/artifact/data" + q({ path }), { sources }),
+  createFile: (folder: string, name: string, kind: "html" | "xlsx", sources: string[] = []) =>
+    req<{ path: string }>("POST", "/api/file/create", { folder, name, kind, sources }),
   open: (path: string, reveal = false) => req("POST", "/api/open", { path, reveal }),
   openUrl: (url: string) => req("POST", "/api/open", { url }),
   daily: (name?: string) => req<{ path: string }>("POST", "/api/daily" + q({ name })),

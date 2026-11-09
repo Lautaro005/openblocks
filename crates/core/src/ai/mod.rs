@@ -648,6 +648,8 @@ pub fn system_prompt(v: &Vault, s: &Settings, req: &SendReq, o: &PromptOpts) -> 
 
     p.push_str("\n# Writing in the vault\n");
     p.push_str("- Obsidian-flavored Markdown: ## and ### headings (never a # heading with the page title: the title is the file name), - lists, 1. steps, - [ ] tasks, [[Page title]] links, ![[file]] embeds, > [!note] / > [!tip] / > [!warning] callouts, tables, fenced code, ==highlight== and #tags.\n");
+    p.push_str("- Columns (2 to 4 side by side): <div class=\"ob-columns\"> holding one <div class=\"ob-column\"> per column, each tag on its own line with a blank line before and after, Markdown inside. A toggle: <details> with <summary>Title</summary>, a blank line, the content, </details>; a toggle heading adds data-heading=\"2\" (1-3) to <details>. Headings go from ## to ####.\n");
+    p.push_str("- Something visual or interactive (a chart, dashboard, calculator, timeline): write_artifact makes a self-contained HTML page the app shows inside, and ![[name.html]] embeds it in a page. For data, keep it in a spreadsheet (write_spreadsheet, or one the user has) and link it in the artifact's `data`, so the user can edit the numbers and the artifact follows.\n");
     p.push_str("- Page properties (status, tags, dates, owners) go in YAML with set_property, not as text lines.\n");
     p.push_str("- Link to pages that exist with their exact title. Match the language, tone and structure the user already uses in the vault.\n");
     p.push_str("- Write the content itself: no filler, no \"here is your page\" inside the page, no placeholder text the user has to fill unless they asked for a template.\n");

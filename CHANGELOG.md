@@ -2,6 +2,57 @@
 
 All notable changes to OpenBlocks. Dates are YYYY-MM-DD.
 
+## [0.1.3] — 2026-11-09
+
+### HTML artifacts
+- **HTML files are now artifacts you see inside the app**, like Claude's: open one and switch between **View** (the page
+  running) and **Code** (an editor with syntax colors, line numbers, indentation and `⌘S`). New ones from the sidebar,
+  a folder's right-click menu or the palette: *New HTML artifact*.
+- **Spreadsheets as data.** The **Data** button links one or more spreadsheets (`.xlsx`, `.csv`…) to an artifact; the
+  page reads them with `openblocks.table()` (rows keyed by the header row), `openblocks.rows()`, `openblocks.sheets()`
+  and `openblocks.files`, with numbers as numbers. Edit the spreadsheet and the artifact updates. The link is a
+  `<meta name="openblocks-data">` tag in the file, so it travels with it.
+- **Embedded in pages:** `![[Panel.html]]` shows the artifact running inside the page; drag its bottom edge to change
+  its height (kept as `![[Panel.html|420]]`).
+- **The AI makes them:** agents have `write_artifact` (a whole HTML page, with its spreadsheets linked) and
+  `write_spreadsheet`, so "make me a dashboard of these sales" ends in an artifact and a spreadsheet you can edit.
+  Undo works for both.
+- Artifacts run **sandboxed**: no access to the app, your vault, your files or the network. They can load libraries
+  from the usual CDNs (jsDelivr, cdnjs, unpkg, esm.sh) and nothing else.
+
+### Spreadsheet editor
+- `.xlsx`, `.csv` and `.tsv` open in an editor of their own: click a cell and type, `Enter`/`Tab`/arrows to move,
+  `Shift` to select a range, `Delete` to clear, copy and paste with other spreadsheets, `⌘Z` to undo, rows, columns and
+  sheets from the headers' and tabs' menus. Saved on its own a moment after you stop.
+- **Formulas** with `=`: references, ranges, arithmetic and the common functions in English or Spanish
+  (`SUM`/`SUMA`, `AVERAGE`/`PROMEDIO`, `IF`/`SI`, `ROUND`/`REDONDEAR`, `COUNT`, `MIN`, `MAX`, `CONCAT`…), computed as
+  you type and saved as real formulas in the `.xlsx` (with their results). Values and formulas are kept; cell
+  formatting is not. `.xls` and `.ods` open read-only, with a button to save an `.xlsx` copy.
+
+### Editor
+- **Columns like Notion's, up to 4:** `/2 columnas`, `/3`, `/4` (or "Columns" in a block's menu), or drag a block by
+  its handle to the left or right edge of another one. Drag the line between two columns to change their widths
+  (double-click resets them). Backspace in an empty column removes it, and a single column left goes back to plain
+  blocks. Blocks inside columns have their own handle to move them in, out and between columns.
+- **Toggle headings** (`/Título desplegable 1–3`, or *Toggle heading* in a block's menu): a toggle whose title is a
+  heading. Stored as `<details data-heading="2">`.
+- **Heading 4** (`####`, `/Título 4`, `⌘⌥4`).
+
+### Settings → Appearance
+- A new section to make the app yours: theme (system, light, dark), **palette** (warm, neutral, sepia, high contrast —
+  each in light and dark), **accent color** (seven or any other), **fonts** for the page text (Source Sans, system,
+  serif, mono or any font installed on your computer), headings and the interface, **text size**, **line spacing**,
+  page width (normal, wide, full) and the **size of the whole interface** (also `⌘+`, `⌘−`, `⌘0`).
+
+### Fixed
+- **PDFs showed a dark gray box.** The webview's PDF viewer does not work inside the app (and Linux has none), so
+  OpenBlocks now draws PDFs itself with pdf.js: pages as you scroll, zoom (buttons, fit to width, pinch or ⌘+wheel),
+  go to page, and text you can select and copy.
+- **Zooming the graph was too sensitive** on trackpads: zoom now follows how far you scroll or pinch, toward the
+  pointer, and there are − / % / + buttons.
+- The floating sidebar (hidden sidebar, mouse on the left edge) had empty space above the vault name on macOS.
+- In Settings → AI, the model list opened past the window and made it scroll sideways.
+
 ## [0.1.2] — 2026-11-08
 
 ### Fixed

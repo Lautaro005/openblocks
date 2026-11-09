@@ -20,6 +20,7 @@ import {
   ArrowSquareOut,
   Table,
   StarFour,
+  FileHtml,
   Check,
   FolderOpen as FolderNotchOpen,
 } from "@phosphor-icons/react";
@@ -219,7 +220,17 @@ export function Sidebar({ floating = false }: { floating?: boolean }) {
           <div className="side-head">
             <span>{t("Páginas")}</span>
             <div className="side-head-actions">
-              <button className="btn-icon xs" title={t("Nueva carpeta")} onClick={() => newFolder("")}>
+              <button
+                className="btn-icon xs"
+                title={t("Nuevo artefacto o planilla")}
+                onClick={(e) =>
+                  openMenuAt(e.currentTarget, [
+                    { label: t("Nueva carpeta"), icon: FolderSimplePlus, run: () => newFolder("") },
+                    { label: t("Nuevo artefacto HTML"), icon: FileHtml, run: () => st.newFile("", "html") },
+                    { label: t("Nueva planilla"), icon: Table, run: () => st.newFile("", "xlsx") },
+                  ])
+                }
+              >
                 <FolderSimplePlus size={15} />
               </button>
               <button className="btn-icon xs" title={t("Nueva página") + ` (${mod}N)`} onClick={() => st.newPage("")}>
@@ -337,6 +348,8 @@ function TreeItem({ n, siblings, depth, over, setOver, dropOn }: { n: TreeNode; 
     if (n.kind === "folder") {
       items.push({ label: t("Nueva página"), icon: Plus, run: () => st.newPage(n.path) });
       items.push({ label: t("Nueva carpeta"), icon: FolderSimplePlus, run: () => newFolder(n.path) });
+      items.push({ label: t("Nuevo artefacto HTML"), icon: FileHtml, run: () => st.newFile(n.path, "html") });
+      items.push({ label: t("Nueva planilla"), icon: Table, run: () => st.newFile(n.path, "xlsx") });
       items.push({
         label: isDb ? t("Ver como carpeta") : t("Ver como base de datos"),
         icon: Table,

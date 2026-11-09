@@ -26,6 +26,8 @@ import {
   DownloadSimple,
   NotionLogo,
   FileZip,
+  PaintBrush,
+  Minus,
 } from "@phosphor-icons/react";
 import { api, type ImportStatus } from "../lib/api";
 import { isMac, mod, useStore } from "../lib/store";
@@ -34,9 +36,11 @@ import { Brand } from "./Brand";
 import { ModelPicker } from "./AiPanel";
 import { Logo } from "./Logo";
 import { DEFAULT_AI_KEY, comboFromEvent, showCombo } from "../lib/keys";
+import { ACCENTS, DEFAULT_APPEARANCE, appearanceOf, nextZoom, type Appearance } from "../lib/appearance";
 
 const TABS: [string, string, any][] = [
   ["general", "General", GearSix],
+  ["look", "Apariencia", PaintBrush],
   ["vault", "Vault", FolderSimple],
   ["templates", "Plantillas", FileDashed],
   ["import", "Importar", DownloadSimple],
@@ -71,6 +75,7 @@ export function Settings() {
             <X size={18} />
           </button>
           {tab === "general" && <General />}
+          {tab === "look" && <Look />}
           {tab === "vault" && <VaultTab />}
           {tab === "templates" && <TemplatesTab />}
           {tab === "import" && <ImportTab />}
@@ -84,9 +89,9 @@ export function Settings() {
   );
 }
 
-function Row({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+function Row({ label, hint, children, stack }: { label: string; hint?: string; children: React.ReactNode; stack?: boolean }) {
   return (
-    <div className="set-row">
+    <div className={`set-row ${stack ? "stack" : ""}`}>
       <div className="set-label">
         <b>{label}</b>
         {hint && <span>{hint}</span>}
@@ -112,6 +117,140 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
   return <button className={`toggle-sw ${on ? "on" : ""}`} onClick={() => onChange(!on)} role="switch" aria-checked={on} />;
 }
 
+const PALETTES: [string, string, string[]][] = [
+  ["warm", "Cálida", ["#fbfaf7", "#f4f2ed", "#1d1c1a", "#c2410c"]],
+  ["neutral", "Neutra", ["#fafafa", "#f3f4f6", "#16181d", "#c2410c"]],
+  ["sepia", "Sepia", ["#f6efe2", "#efe6d5", "#3b2f22", "#c2410c"]],
+  ["contrast", "Alto contraste", ["#ffffff", "#ebebeb", "#000000", "#c2410c"]],
+];
+
+function Look() {
+  const st = useStore();
+  const s = st.settings;
+  const a = appearanceOf(s);
+  const set = (patch: Partial<Appearance>) => st.saveSettings({ appearance: patch });
+  const [custom, setCustom] = useState(a.customFont);
+  const dark = document.documentElement.dataset.theme === "dark";
+  return (
+    <section>
+      <h3>{t("Apariencia")}</h3>
+      <Row label={t("Tema")}>
+        <Seg value={s.theme} options={[["system", t("Sistema")], ["light", t("Claro")], ["dark", t("Oscuro")]]} onChange={(v) => st.saveSettings({ theme: v })} />
+      </Row>
+      <Row label={t("Paleta")} hint={t("Los colores de fondo, líneas y texto, en claro y en oscuro.")} stack>
+        <div className="palettes">
+          {PALETTES.map(([id, label, c]) => (
+            <button key={id} className={`palette-opt ${a.palette === id ? "on" : ""}`} onClick={() => set({ palette: id as Appearance["palette"] })}>
+              <span className="palette-swatch">
+                {(dark ? [c[2], c[1], c[0], c[3]] : c).map((x, i) => (
+                  <span key={i} style={{ background: x }} />
+                ))}
+              </span>
+              {t(label)}
+            </button>
+          ))}
+        </div>
+      </Row>
+      <Row label={t("Color de acento")} hint={t("Botones, selección y marcas.")}>
+        <div className="accents">
+          {ACCENTS.map(([hex, name]) => (
+            <button
+              key={hex || "default"}
+              className={`accent-dot ${a.accent === hex ? "on" : ""}`}
+              title={t(name)}
+              style={{ background: hex || "#c2410c" }}
+              onClick={() => set({ accent: hex })}
+            />
+          ))}
+          <input
+            type="color"
+            className="accent-custom"
+            title={t("Otro color")}
+            value={a.accent || "#c2410c"}
+            onChange={(e) => set({ accent: e.target.value })}
+          />
+        </div>
+      </Row>
+
+      <h4 className="set-sub">{t("Letra")}</h4>
+      <Row label={t("Texto de las páginas")} stack>
+        <div className="set-col">
+          <Seg
+            value={a.textFont}
+            options={[["sans", "Source Sans"], ["system", t("Sistema")], ["serif", "Serif"], ["mono", "Mono"], ["custom", t("Otra…")]]}
+            onChange={(v) => set({ textFont: v as Appearance["textFont"] })}
+          />
+          {a.textFont === "custom" && (
+            <input
+              className="input sm"
+              placeholder={t("Nombre de una letra instalada, p. ej. Inter")}
+              value={custom}
+              onChange={(e) => setCustom(e.target.value)}
+              onBlur={() => set({ customFont: custom.trim() })}
+              onKeyDown={(e) => e.key === "Enter" && set({ customFont: custom.trim() })}
+            />
+          )}
+        </div>
+      </Row>
+      <Row label={t("Títulos")}>
+        <Seg
+          value={a.headingFont}
+          options={[["rounded", "Nunito"], ["same", t("Como el texto")], ["serif", "Serif"], ["system", t("Sistema")]]}
+          onChange={(v) => set({ headingFont: v as Appearance["headingFont"] })}
+        />
+      </Row>
+      <Row label={t("Interfaz")} hint={t("Menús, barra lateral y botones.")}>
+        <Seg value={a.uiFont} options={[["sans", "Source Sans"], ["system", t("Sistema")]]} onChange={(v) => set({ uiFont: v as Appearance["uiFont"] })} />
+      </Row>
+      <Row label={t("Tamaño del texto")}>
+        <div className="stepper">
+          <button className="btn-icon sm" onClick={() => set({ textSize: Math.max(12, Math.round((a.textSize - 0.5) * 2) / 2) })}>
+            <Minus size={14} />
+          </button>
+          <input type="range" className="range" min={12} max={24} step={0.5} value={a.textSize} onChange={(e) => set({ textSize: Number(e.target.value) })} />
+          <button className="btn-icon sm" onClick={() => set({ textSize: Math.min(24, Math.round((a.textSize + 0.5) * 2) / 2) })}>
+            <Plus size={14} />
+          </button>
+          <span className="zoom-val">{a.textSize} px</span>
+        </div>
+      </Row>
+      <Row label={t("Interlineado")}>
+        <Seg value={a.lineHeight} options={[["compact", t("Compacto")], ["normal", t("Normal")], ["relaxed", t("Amplio")]]} onChange={(v) => set({ lineHeight: v as Appearance["lineHeight"] })} />
+      </Row>
+      <Row label={t("Ancho de la página")}>
+        <Seg value={s.width} options={[["normal", t("Normal")], ["wide", t("Ancho")], ["full", t("Completo")]]} onChange={(v) => st.saveSettings({ width: v })} />
+      </Row>
+
+      <h4 className="set-sub">{t("Tamaño")}</h4>
+      <Row label={t("Tamaño de la interfaz")} hint={t("Todo más grande o más chico. También con {m}+ y {m}− ({m}0 vuelve al 100%).", { m: mod })}>
+        <div className="stepper">
+          <button className="btn-icon sm" onClick={() => set({ zoom: nextZoom(a.zoom, -1) })} title={t("Alejar")}>
+            <Minus size={14} />
+          </button>
+          <button className="zoom-val" onClick={() => set({ zoom: 1 })} title={t("Volver al 100%")}>
+            {Math.round(a.zoom * 100)}%
+          </button>
+          <button className="btn-icon sm" onClick={() => set({ zoom: nextZoom(a.zoom, 1) })} title={t("Acercar")}>
+            <Plus size={14} />
+          </button>
+        </div>
+      </Row>
+
+      <div className="look-preview prose">
+        <h2>{t("Así se ve una página")}</h2>
+        <p>
+          {t("Un párrafo de ejemplo con")} <strong>{t("negrita")}</strong>, <em>{t("cursiva")}</em>, <mark>{t("resaltado")}</mark> {t("y un")} <a>{t("enlace")}</a>.
+        </p>
+      </div>
+      <p>
+        <button className="btn ghost sm" onClick={() => st.saveSettings({ appearance: DEFAULT_APPEARANCE, theme: "system", width: "normal" })}>
+          <ArrowsClockwise size={14} /> {t("Volver a la apariencia original")}
+        </button>
+      </p>
+    </section>
+  );
+}
+
 function General() {
   const st = useStore();
   const s = st.settings;
@@ -121,11 +260,10 @@ function General() {
       <Row label={t("Idioma")}>
         <Seg value={s.language} options={[["system", t("Sistema")], ["es", "Español"], ["en", "English"]]} onChange={(v) => st.saveSettings({ language: v })} />
       </Row>
-      <Row label={t("Tema")}>
-        <Seg value={s.theme} options={[["system", t("Sistema")], ["light", t("Claro")], ["dark", t("Oscuro")]]} onChange={(v) => st.saveSettings({ theme: v })} />
-      </Row>
-      <Row label={t("Ancho de la página")}>
-        <Seg value={s.width} options={[["normal", t("Normal")], ["wide", t("Ancho")]]} onChange={(v) => st.saveSettings({ width: v })} />
+      <Row label={t("Tema, letra y tamaño")} hint={t("Están en Apariencia.")}>
+        <button className="btn sm" onClick={() => useStore.setState({ settingsTab: "look" })}>
+          <PaintBrush size={14} /> {t("Apariencia")}
+        </button>
       </Row>
       <Row label={t("Corrector ortográfico")}>
         <Toggle on={s.spellcheck !== false} onChange={(v) => st.saveSettings({ spellcheck: v })} />
@@ -936,7 +1074,8 @@ function Keys() {
     [`${mod} ⇧ H`, "Resaltar"],
     [`${mod} F`, "Buscar en la página"],
     [isMac ? `${mod} ⌥ F` : `${mod} H`, "Buscar y reemplazar"],
-    [`${mod} ⌥ 1 · 2 · 3`, "Títulos"],
+    [`${mod} ⌥ 1 · 2 · 3 · 4`, "Títulos"],
+    [`${mod} +  ·  ${mod} −  ·  ${mod} 0`, "Tamaño de la interfaz"],
     ["Esc", "Cerrar menús y ventanas"],
   ];
   return (

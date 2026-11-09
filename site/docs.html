@@ -27,7 +27,9 @@
       <a href="#editor"><span data-l="es">Editor</span><span data-l="en">Editor</span></a>
       <a href="#markdown"><span data-l="es">Formato Markdown</span><span data-l="en">Markdown format</span></a>
       <a href="#files"><span data-l="es">Archivos</span><span data-l="en">Files</span></a>
+      <a href="#artifacts"><span data-l="es">Artefactos HTML y planillas</span><span data-l="en">HTML artifacts and spreadsheets</span></a>
       <a href="#sidebar"><span data-l="es">Barra lateral y carpetas</span><span data-l="en">Sidebar and folders</span></a>
+      <a href="#look"><span data-l="es">Apariencia</span><span data-l="en">Appearance</span></a>
       <a href="#databases"><span data-l="es">Bases de datos</span><span data-l="en">Databases</span></a>
       <a href="#import"><span data-l="es">Importar desde Notion</span><span data-l="en">Import from Notion</span></a>
       <a href="#links"><span data-l="es">Enlaces y grafo</span><span data-l="en">Links and graph</span></a>
@@ -72,7 +74,7 @@
 <h2 id="editor">Editor</h2>
 <p>El documento es la vista: lo que escribís ya se ve con formato, sin un modo de edición aparte.</p>
 <ul>
-<li><kbd>/</kbd> abre el menú de bloques: texto, títulos, listas, tareas, citas, notas destacadas, desplegables, código, tablas, separadores, enlaces, archivos, la fecha, plantillas y la IA.</li>
+<li><kbd>/</kbd> abre el menú de bloques: texto, títulos (del 1 al 4), listas, tareas, citas, notas destacadas, desplegables y títulos desplegables, columnas, código, tablas, separadores, enlaces, archivos, la fecha, plantillas y la IA.</li>
 <li>Plantillas: en Ajustes → Plantillas elegís la predeterminada para cada página nueva, creás las tuyas o guardás la página abierta como plantilla.</li>
 <li>El atajo Markdown también funciona mientras escribís: <code>#</code>, <code>-</code>, <code>1.</code>, <code>[ ]</code>, <code>&gt;</code>, <code>```</code> y <code>---</code>.</li>
 <li>Pasá el mouse a la izquierda de un bloque: <b>+</b> inserta uno debajo y <b>⋮⋮</b> lo arrastra o abre su menú (convertir, duplicar, copiar como Markdown, preguntarle a la IA, borrar).</li>
@@ -84,6 +86,10 @@
 
 <h3>Buscar y reemplazar</h3>
 <p><kbd>⌘F</kbd> (<kbd>Ctrl</kbd>+<kbd>F</kbd>) abre la barra de búsqueda de la página; con texto seleccionado, busca ese texto. Las coincidencias se resaltan; <kbd>↵</kbd> y <kbd>⇧↵</kbd> van a la siguiente y a la anterior. Opciones: distinguir mayúsculas, palabra completa y expresión regular (en el reemplazo, <code>$1</code>, <code>$2</code>… son los grupos). Con la flecha de la izquierda (o <kbd>⌘⌥F</kbd> / <kbd>Ctrl</kbd>+<kbd>H</kbd>) aparece el reemplazo: reemplazar una, todas (<kbd>⌘↵</kbd>), borrar todas las coincidencias o borrar los bloques que las tienen. Cada acción se deshace con <kbd>⌘Z</kbd>.</p>
+<h3>Columnas</h3>
+<p>Hasta 4 columnas, como en Notion: <kbd>/</kbd> → <i>2 columnas</i>, <i>3</i> o <i>4</i> (o <i>Columnas</i> en el menú <b>⋮⋮</b> de un bloque), o arrastrá un bloque por su <b>⋮⋮</b> hasta el borde izquierdo o derecho de otro. La línea entre dos columnas se arrastra para cambiar los anchos (doble clic los iguala). Cada bloque dentro de una columna tiene su propio <b>⋮⋮</b> para moverlo dentro, fuera o entre columnas. Backspace en una columna vacía la quita; si queda una sola, vuelven a ser bloques comunes.</p>
+<h3>Títulos desplegables</h3>
+<p><kbd>/</kbd> → <i>Título desplegable 1</i>, <i>2</i> o <i>3</i> (o <i>Título desplegable</i> en el menú <b>⋮⋮</b>): un desplegable cuyo título es un título. Enter en el título pasa al contenido.</p>
 <h3>Seleccionar varios bloques</h3>
 <p>Como en el escritorio: apretá fuera del texto (en el margen de la página o debajo del último bloque) y arrastrá un rectángulo. Los bloques que toca quedan seleccionados para borrarlos, cortarlos, copiarlos, darles formato o pedirle algo a la IA. <kbd>Esc</kbd> quita la selección.</p>
 
@@ -95,6 +101,9 @@
 <tr><td>Archivo o imagen incrustados</td><td><code>![[informe.pdf]]</code>, <code>![](foto.png)</code></td></tr>
 <tr><td>Nota destacada</td><td><code>&gt; [!warning] Título</code></td></tr>
 <tr><td>Desplegable</td><td><code>&lt;details&gt;&lt;summary&gt;…&lt;/summary&gt;…&lt;/details&gt;</code></td></tr>
+<tr><td>Título desplegable</td><td><code>&lt;details data-heading="2"&gt;</code></td></tr>
+<tr><td>Columnas</td><td><code>&lt;div class="ob-columns"&gt;</code> con un <code>&lt;div class="ob-column"&gt;</code> por columna (Markdown adentro, cada etiqueta en su línea)</td></tr>
+<tr><td>Artefacto en la página</td><td><code>![[panel.html]]</code>, <code>![[panel.html|420]]</code> (alto)</td></tr>
 <tr><td>Tarea</td><td><code>- [ ]</code> y <code>- [x]</code></td></tr>
 <tr><td>Resaltado</td><td><code>==texto==</code></td></tr>
 <tr><td>Etiqueta</td><td><code>#etiqueta</code> o <code>tags:</code> en las propiedades</td></tr>
@@ -104,14 +113,27 @@
 <p>Arrastrá archivos a una página (o usá <kbd>/</kbd> → Archivo o imagen): se copian a una carpeta <code>attachments</code> junto a la página y quedan como un bloque. Al tocarlo se abre la vista previa al costado; el botón de las esquinas la pasa a una ventana flotante que se puede mover y agrandar.</p>
 <table>
 <tr><th>Formato</th><th>Cómo se ve</th></tr>
-<tr><td>PDF</td><td>Con el visor del sistema, página por página</td></tr>
+<tr><td>PDF</td><td>Con el visor propio: páginas al desplazarte, zoom (botones, ajustar al ancho, pellizco o <kbd>⌘</kbd>+rueda), ir a una página y texto seleccionable</td></tr>
 <tr><td>Word (.docx)</td><td>Como documento: títulos, negritas, listas y tablas</td></tr>
-<tr><td>Excel (.xlsx, .xls, .ods), CSV</td><td>Como planilla, con pestañas por hoja</td></tr>
+<tr><td>Excel (.xlsx, .xls, .ods), CSV</td><td>En el editor de planillas, con fórmulas y pestañas por hoja (.xls y .ods, solo lectura)</td></tr>
+<tr><td>HTML</td><td>Como artefacto: la página funcionando o su código</td></tr>
 <tr><td>PowerPoint (.pptx)</td><td>Como diapositivas con título y texto</td></tr>
 <tr><td>Imágenes, audio y video</td><td>En la página misma y al costado, con zoom</td></tr>
 <tr><td>Markdown, texto y código</td><td>Con formato o como texto</td></tr>
 </table>
 <p>Los archivos de Office se leen en tu equipo (Rust, sin internet). Arrastrar archivos a la barra lateral los agrega a esa carpeta; un <code>.md</code> se convierte en página.</p>
+
+<h2 id="artifacts">Artefactos HTML y planillas</h2>
+<p>Un <b>artefacto</b> es una página HTML (con su CSS y JavaScript) guardada en el vault que se ve funcionando dentro de OpenBlocks, como los artefactos de Claude: un tablero, un gráfico, una calculadora, una línea de tiempo. Creá uno desde la barra lateral (el botón de carpeta → <i>Nuevo artefacto HTML</i>), el menú de una carpeta o <kbd>⌘K</kbd>, o pedíselo a la IA.</p>
+<ul>
+<li><b>Vista y Código:</b> el interruptor de arriba cambia entre la página funcionando y su código, con colores, números de línea, sangría automática y <kbd>⌘S</kbd> para guardar.</li>
+<li><b>Datos:</b> el botón <i>Datos</i> vincula planillas (.xlsx, .csv, .tsv, .xls, .ods). La página las lee con <code>openblocks.table()</code> (las filas como objetos, con la primera fila como encabezados), <code>openblocks.rows()</code>, <code>openblocks.sheets()</code> y <code>openblocks.files</code>; los números llegan como números y <code>openblocks.theme</code> dice si la app está en claro u oscuro. Al editar la planilla, el artefacto se actualiza. El vínculo queda en el archivo como <code>&lt;meta name="openblocks-data" content="Ventas.xlsx"&gt;</code>.</li>
+<li><b>En una página:</b> <code>![[panel.html]]</code> lo muestra funcionando dentro de la página; arrastrá su borde inferior para cambiar el alto.</li>
+<li><b>Con la IA:</b> los agentes tienen <code>write_artifact</code> y <code>write_spreadsheet</code>: “haceme un tablero con estas ventas” termina en una planilla que podés editar y un artefacto que la usa. Los dos se deshacen desde su tarjeta.</li>
+<li><b>Aislado:</b> un artefacto no puede tocar la app, el vault, tus archivos ni la red. Solo carga librerías de jsDelivr, cdnjs, unpkg y esm.sh (por ejemplo Chart.js).</li>
+</ul>
+<h3>Editor de planillas</h3>
+<p>Los <code>.xlsx</code>, <code>.csv</code> y <code>.tsv</code> se abren en un editor: clic en una celda y escribí; <kbd>↵</kbd>, <kbd>Tab</kbd> y las flechas para moverte, <kbd>⇧</kbd> para elegir un rango, <kbd>⌫</kbd> para borrar, copiar y pegar con otras planillas, <kbd>⌘Z</kbd> para deshacer. Filas, columnas y hojas se agregan o borran desde el menú de sus encabezados y pestañas. Se guarda solo. Con <code>=</code> escribís fórmulas: referencias, rangos, cuentas y funciones en inglés o castellano (<code>SUMA</code>, <code>PROMEDIO</code>, <code>SI</code>, <code>REDONDEAR</code>, <code>CONTAR</code>, <code>MIN</code>, <code>MAX</code>…), que se calculan al escribir y quedan como fórmulas en el <code>.xlsx</code>. Se guardan valores y fórmulas, no el formato de las celdas; en <code>.csv</code> las fórmulas quedan como su resultado. Los <code>.xls</code> y <code>.ods</code> se abren solo para leer, con un botón para guardar una copia <code>.xlsx</code>.</p>
 
 <h2 id="sidebar">Barra lateral y carpetas</h2>
 <ul>
@@ -157,6 +179,9 @@
 <h2 id="history">Historial y papelera</h2>
 <p>OpenBlocks guarda una copia de cada página cada diez minutos de edición y siempre antes de que la IA la cambie. El reloj arriba a la derecha muestra las versiones; elegí una y tocá Restaurar (la actual queda en el historial). Lo que borrás va a la papelera del vault, de donde se restaura; solo “Vaciar la papelera” borra para siempre.</p>
 
+<h2 id="look">Apariencia</h2>
+<p>En Ajustes → <b>Apariencia</b>: tema (sistema, claro u oscuro), paleta (cálida, neutra, sepia o alto contraste, cada una en claro y oscuro), color de acento (siete o cualquier otro), la letra del texto de las páginas (Source Sans, la del sistema, serif, mono o cualquier letra instalada en tu compu), la de los títulos y la de la interfaz, el tamaño del texto, el interlineado, el ancho de la página (normal, ancho o completo) y el tamaño de toda la interfaz, también con <kbd>⌘+</kbd>, <kbd>⌘−</kbd> y <kbd>⌘0</kbd>. Se aplica al instante.</p>
+
 <h2 id="ai">IA y agentes</h2>
 <p>El chat (<kbd>⌘J</kbd>) usa los modelos que ya tenés, sin cuentas nuevas:</p>
 <table>
@@ -166,13 +191,13 @@
 <tr><td>Anthropic, OpenAI u otra API compatible, OpenRouter</td><td>Con tu clave, en Ajustes → IA.</td></tr>
 <tr><td>Agentes de OpenCue</td><td>Aparecen en el selector y trabajan dentro de OpenBlocks con su modelo, sus instrucciones y su memoria, usando las herramientas del vault. Si su modelo necesita una clave que solo tiene OpenCue, se les pregunta a través de OpenCue.</td></tr>
 </table>
-<p>Los agentes buscan, leen, crean, editan, renombran, mueven y borran páginas, archivos y carpetas, y cambian propiedades. Cada cambio aparece como una tarjeta con <b>Deshacer</b> (lo borrado va a la papelera). Si preferís que solo lean, apagá “Los agentes pueden editar” en Ajustes → IA.</p>
+<p>Los agentes buscan, leen, crean, editan, renombran, mueven y borran páginas, archivos y carpetas, cambian propiedades y crean artefactos HTML y planillas. Cada cambio aparece como una tarjeta con <b>Deshacer</b> (lo borrado va a la papelera). Si preferís que solo lean, apagá “Los agentes pueden editar” en Ajustes → IA.</p>
 <p>Con el clip (o arrastrando al chat) adjuntás archivos: PDF, Word, Excel, PowerPoint, CSV, texto o HTML. El agente los lee y, si se lo pedís, los pasa a una página o guarda el archivo en el vault.</p>
 <p><kbd>⌘.</kbd> (<kbd>Ctrl</kbd> + <kbd>.</kbd> en Windows y Linux) abre una caja debajo de la línea para decirle a la IA qué escribir o cambiar ahí, con toda la página como contexto. El atajo se cambia en Ajustes → Atajos.</p>
 <p>Contexto: la página abierta va por defecto (tocá su etiqueta para sacarla); sumá otras con <kbd>@</kbd>. Las pills <b>Web</b>, <b>brain</b> y <b>Lumina</b> agregan esas búsquedas. En el editor, seleccioná texto → IA para mejorarlo, corregirlo, acortarlo, extenderlo, resumirlo, traducirlo, sacarle las tareas o convertirlo en tabla.</p>
 
 <h2 id="mcp">Servidor MCP</h2>
-<p><code>openblocks mcp</code> expone tus vaults por stdio con las mismas herramientas que el chat: <code>search_pages</code>, <code>read_page</code>, <code>list_pages</code>, <code>backlinks</code>, <code>find_images</code>, <code>create_page</code>, <code>edit_page</code>, <code>set_property</code>, <code>create_folder</code>, <code>move</code>, <code>delete</code> y, con <code>--with web,brain,lumina</code>, <code>web_search</code>, <code>web_fetch</code>, <code>brain_search</code> y <code>lumina_search</code>.</p>
+<p><code>openblocks mcp</code> expone tus vaults por stdio con las mismas herramientas que el chat: <code>search_pages</code>, <code>read_page</code>, <code>list_pages</code>, <code>backlinks</code>, <code>find_images</code>, <code>create_page</code>, <code>edit_page</code>, <code>set_property</code>, <code>create_folder</code>, <code>move</code>, <code>delete</code>, <code>write_artifact</code>, <code>write_spreadsheet</code> y, con <code>--with web,brain,lumina</code>, <code>web_search</code>, <code>web_fetch</code>, <code>brain_search</code> y <code>lumina_search</code>.</p>
 <pre><code>claude mcp add openblocks -- openblocks mcp
 codex mcp add openblocks -- openblocks mcp
 # Cursor, Claude Desktop, Windsurf…
@@ -203,7 +228,8 @@ codex mcp add openblocks -- openblocks mcp
 <tr><td><kbd>⌘[</kbd> <kbd>⌘]</kbd></td><td>Atrás y adelante</td></tr>
 <tr><td><kbd>⌘,</kbd></td><td>Ajustes</td></tr>
 <tr><td><kbd>⌘⇧H</kbd></td><td>Resaltar</td></tr>
-<tr><td><kbd>⌘⌥1</kbd>–<kbd>3</kbd></td><td>Títulos</td></tr>
+<tr><td><kbd>⌘⌥1</kbd>–<kbd>4</kbd></td><td>Títulos</td></tr>
+<tr><td><kbd>⌘+</kbd> / <kbd>⌘−</kbd> / <kbd>⌘0</kbd></td><td>Tamaño de la interfaz</td></tr>
 <tr><td><kbd>⌘F</kbd></td><td>Buscar en la página</td></tr>
 <tr><td><kbd>⌘⌥F</kbd> (<kbd>Ctrl</kbd>+<kbd>H</kbd>)</td><td>Buscar y reemplazar</td></tr>
 </table>
@@ -231,6 +257,7 @@ codex mcp add openblocks -- openblocks mcp
 <li><b>No aparece ningún modelo:</b> abrí Ollama o LM Studio, o instalá Claude Code o Codex, y tocá “Volver a buscar modelos” en el selector.</li>
 <li><b>El puerto 47880 está ocupado:</b> OpenBlocks usa otro libre solo. Con <code>openblocks serve --port 48000</code> elegís uno.</li>
 <li><b>“La página cambió afuera”:</b> otro programa la editó mientras escribías. Elegí “Usar la del disco” o seguí escribiendo para quedarte con tu versión (la otra queda en el historial).</li>
+<li><b>Un PDF se ve como un recuadro gris:</b> pasaba hasta la 0.1.2. Desde la 0.1.3 OpenBlocks dibuja los PDF con su propio visor.</li>
 <li><b>Un enlace crea una página nueva en vez de abrir la que existe:</b> pasaba en la 0.1.1 con carpetas grandes (como una importación de Notion). Actualizá a la 0.1.2: el índice ya no pierde páginas y la búsqueda y el grafo vuelven a verlas.</li>
 <li><b>macOS pide acceso a un disco externo:</b> si tu vault está en un USB o disco externo, macOS pregunta una vez. Si dijiste que no, activalo en Configuración del Sistema → Privacidad y seguridad → Archivos y carpetas → OpenBlocks → Volúmenes extraíbles.</li>
 <li><b>Linux sin FUSE:</b> el comando <code>openblocks</code> corre la AppImage extraída automáticamente.</li>
@@ -249,7 +276,7 @@ codex mcp add openblocks -- openblocks mcp
 <p>Pick a language and theme, the vault folder (empty, or one with notes such as your Obsidian vault), its name, and your default AI model. Run it again from Settings → General.</p>
 <h2 id="editor-en">Editor</h2>
 <ul>
-<li><kbd>/</kbd> opens the block menu: text, headings, lists, tasks, quotes, callouts, toggles, code, tables, dividers, links, files, today's date, templates and AI.</li>
+<li><kbd>/</kbd> opens the block menu: text, headings (1 to 4), lists, tasks, quotes, callouts, toggles and toggle headings, columns, code, tables, dividers, links, files, today's date, templates and AI.</li>
 <li>Templates: in Settings → Templates pick the default for every new page, create your own, or save the open page as a template.</li>
 <li>Markdown shortcuts work as you type: <code>#</code>, <code>-</code>, <code>1.</code>, <code>[ ]</code>, <code>&gt;</code>, <code>```</code>, <code>---</code>.</li>
 <li>Hover left of a block: <b>+</b> inserts one below; <b>⋮⋮</b> drags it or opens its menu.</li>
@@ -258,13 +285,19 @@ codex mcp add openblocks -- openblocks mcp
 <li>It saves itself 0.7 s after you stop typing, and warns instead of overwriting when another program changed the page.</li>
 </ul>
 <p><b>Find and replace:</b> <kbd>⌘F</kbd> (<kbd>Ctrl</kbd>+<kbd>F</kbd>) finds in the page — the selected text, if any — with match case, whole word and regular expressions; <kbd>↵</kbd>/<kbd>⇧↵</kbd> move between matches. <kbd>⌘⌥F</kbd> (<kbd>Ctrl</kbd>+<kbd>H</kbd>) adds replace: one, all (<kbd>⌘↵</kbd>), delete every match, or delete the blocks that contain them. All undoable.</p>
+<p><b>Columns:</b> up to 4, like Notion — <kbd>/</kbd> → 2, 3 or 4 columns (or Columns in a block's <b>⋮⋮</b> menu), or drag a block by its <b>⋮⋮</b> to the left or right edge of another. Drag the line between columns to resize them (double-click evens them); blocks inside columns have their own handle; Backspace in an empty column removes it. <b>Toggle headings:</b> <kbd>/</kbd> → Toggle heading 1–3.</p>
 <p><b>Select many blocks:</b> press outside the text (page margins, under the last block) and drag a rectangle, like on a desktop. Delete, cut, copy, format or ask the AI about the selected blocks; <kbd>Esc</kbd> clears it.</p>
 <h2 id="markdown-en">Markdown format</h2>
-<p><code>[[Page]]</code>, <code>![[file.pdf]]</code>, <code>&gt; [!warning] Title</code>, <code>&lt;details&gt;</code>, <code>- [ ]</code>, <code>==highlight==</code>, <code>#tag</code> — the same as Obsidian.</p>
+<p><code>[[Page]]</code>, <code>![[file.pdf]]</code>, <code>&gt; [!warning] Title</code>, <code>&lt;details&gt;</code>, <code>- [ ]</code>, <code>==highlight==</code>, <code>#tag</code> — the same as Obsidian. Toggle headings are <code>&lt;details data-heading="2"&gt;</code>; columns are a <code>&lt;div class="ob-columns"&gt;</code> with one <code>&lt;div class="ob-column"&gt;</code> per column (Markdown inside); <code>![[panel.html|420]]</code> embeds an artifact 420 px tall.</p>
 <h2 id="files-en">Files</h2>
-<p>Drop files on a page: they are copied to an <code>attachments</code> folder next to it. Click one for the side preview, or pop it into a floating window. PDF, Word, Excel/CSV, PowerPoint, images, audio, video, Markdown and code all preview locally, with no internet.</p>
+<p>Drop files on a page: they are copied to an <code>attachments</code> folder next to it. Click one for the side preview, or pop it into a floating window. PDF, Word, Excel/CSV, PowerPoint, images, audio, video, Markdown and code all preview locally, with no internet. PDFs open in OpenBlocks' own viewer (zoom, fit to width, go to page, selectable text).</p>
+<h2 id="artifacts-en">HTML artifacts and spreadsheets</h2>
+<p>An <b>artifact</b> is an HTML page (with its CSS and JavaScript) kept in the vault and shown running inside OpenBlocks, like Claude's artifacts. Create one from the sidebar (folder button → New HTML artifact), a folder's menu or <kbd>⌘K</kbd>, or ask the AI. A toggle switches between <b>View</b> and <b>Code</b> (syntax colors, line numbers, <kbd>⌘S</kbd>). <b>Data</b> links spreadsheets; the page reads them with <code>openblocks.table()</code> (rows keyed by the header row), <code>openblocks.rows()</code>, <code>openblocks.sheets()</code> and <code>openblocks.files</code>, and updates when they change; the link is a <code>&lt;meta name="openblocks-data"&gt;</code> tag in the file. <code>![[panel.html]]</code> embeds it in a page (drag the bottom edge for height). Agents have <code>write_artifact</code> and <code>write_spreadsheet</code>. Artifacts are sandboxed: no access to the app, the vault or the network; libraries load only from jsDelivr, cdnjs, unpkg and esm.sh.</p>
+<p><b>Spreadsheet editor:</b> <code>.xlsx</code>, <code>.csv</code> and <code>.tsv</code> open in an editor — type in cells, move with <kbd>↵</kbd>/<kbd>Tab</kbd>/arrows, select ranges with <kbd>⇧</kbd>, copy and paste with other spreadsheets, <kbd>⌘Z</kbd>, rows/columns/sheets from the headers and tabs. Formulas with <code>=</code> (references, ranges, arithmetic, SUM, AVERAGE, IF, ROUND, COUNT, MIN, MAX… also in Spanish) are computed as you type and saved as real formulas in the <code>.xlsx</code>. Values and formulas are kept, cell formatting is not. Saved automatically; <code>.xls</code>/<code>.ods</code> open read-only.</p>
 <h2 id="sidebar-en">Sidebar and folders</h2>
 <p>Drag the sidebar's edge to resize it (double-click resets). When it is hidden, move the mouse to the window's left edge and it floats over the page. Click a folder's name to open it — its own same-named page (how Notion pages with subpages arrive) or the folder view — and the rest of the row to expand it; <i>Open</i> leads the right-click menu. The folder view sorts by name, last edit, type or by hand (drag), as a list or a grid, saved per folder.</p>
+<h2 id="look-en">Appearance</h2>
+<p>Settings → <b>Appearance</b>: theme, palette (warm, neutral, sepia, high contrast — light and dark), accent color, fonts for page text (Source Sans, system, serif, mono or any installed font), headings and interface, text size, line spacing, page width (normal, wide, full) and the size of the whole interface (also <kbd>⌘+</kbd>, <kbd>⌘−</kbd>, <kbd>⌘0</kbd>).</p>
 <h2 id="databases-en">Databases</h2>
 <p>Right-click a folder → View as database. Pages are rows, properties are columns. Table (edit, sort, hide, add columns) or board (grouped by a property; drag cards to change it). Everything stays in each page's frontmatter.</p>
 <h2 id="import-en">Import from Notion</h2>
@@ -279,11 +312,11 @@ codex mcp add openblocks -- openblocks mcp
 <h2 id="history-en">History and trash</h2>
 <p>A copy every ten minutes of editing and always before an AI change. Restore any version from the clock icon. Deleted items go to the vault's trash until you empty it.</p>
 <h2 id="ai-en">AI and agents</h2>
-<p><kbd>⌘J</kbd> opens the chat. Ollama and LM Studio (local), Claude Code and Codex (your login), Anthropic / OpenAI-compatible / OpenRouter (your key) and your OpenCue agents. Agents search, read, create, edit, rename, move and delete pages, files and folders, and every change has an <b>Undo</b> card. Turn editing off in Settings → AI. Add pages with <kbd>@</kbd>, attach files (PDF, Word, Excel, PowerPoint, CSV, text) with the paperclip; the Web, brain and Lumina pills add those searches. OpenCue agents work here with their own model, instructions and memory. Select text → AI for inline actions, or press <kbd>⌘.</kbd> (<kbd>Ctrl</kbd> + <kbd>.</kbd>) to tell the AI what to write on the current line; change it in Settings → Shortcuts.</p>
+<p><kbd>⌘J</kbd> opens the chat. Ollama and LM Studio (local), Claude Code and Codex (your login), Anthropic / OpenAI-compatible / OpenRouter (your key) and your OpenCue agents. Agents search, read, create, edit, rename, move and delete pages, files and folders, make HTML artifacts and spreadsheets, and every change has an <b>Undo</b> card. Turn editing off in Settings → AI. Add pages with <kbd>@</kbd>, attach files (PDF, Word, Excel, PowerPoint, CSV, text) with the paperclip; the Web, brain and Lumina pills add those searches. OpenCue agents work here with their own model, instructions and memory. Select text → AI for inline actions, or press <kbd>⌘.</kbd> (<kbd>Ctrl</kbd> + <kbd>.</kbd>) to tell the AI what to write on the current line; change it in Settings → Shortcuts.</p>
 <h2 id="mcp-en">MCP server</h2>
 <pre><code>claude mcp add openblocks -- openblocks mcp
 codex mcp add openblocks -- openblocks mcp</code></pre>
-<p>Tools: <code>search_pages</code>, <code>read_page</code>, <code>list_pages</code>, <code>backlinks</code>, <code>find_images</code>, <code>create_page</code>, <code>edit_page</code>, <code>set_property</code>, <code>create_folder</code>, <code>move</code>, <code>delete</code>, plus <code>web_search</code>, <code>web_fetch</code>, <code>brain_search</code>, <code>lumina_search</code> with <code>--with</code>. Vaults: with no option, the choice in Settings → Family → MCP (the open one or all); <code>--all</code> for every vault (tools take <code>vault</code>, plus <code>list_vaults</code>), <code>--vault &lt;dir&gt;</code> for one. <code>--read-only</code> removes the tools that change anything.</p>
+<p>Tools: <code>search_pages</code>, <code>read_page</code>, <code>list_pages</code>, <code>backlinks</code>, <code>find_images</code>, <code>create_page</code>, <code>edit_page</code>, <code>set_property</code>, <code>create_folder</code>, <code>move</code>, <code>delete</code>, <code>write_artifact</code>, <code>write_spreadsheet</code>, plus <code>web_search</code>, <code>web_fetch</code>, <code>brain_search</code>, <code>lumina_search</code> with <code>--with</code>. Vaults: with no option, the choice in Settings → Family → MCP (the open one or all); <code>--all</code> for every vault (tools take <code>vault</code>, plus <code>list_vaults</code>), <code>--vault &lt;dir&gt;</code> for one. <code>--read-only</code> removes the tools that change anything.</p>
 <p><b>Remote access by URL</b> (Settings → Family) publishes the same server through a Cloudflare tunnel — a quick <code>*.trycloudflare.com</code> URL or your own domain — for agents in the cloud. The URL carries a secret token (<code>https://…/&lt;token&gt;/mcp</code> or <code>Authorization: Bearer</code>); without it everything answers 404. Regenerate the token to cut a URL off; read-only mode keeps remote agents from changing anything. <code>cloudflared</code> is installed from Cloudflare's release with its SHA256 checked.</p>
 <p><b>Local models</b> (Settings → AI): Gemma 4 reads images and scanned PDFs for every agent and works as a chat model on its own; EmbeddingGemma 2 finds images by what they show. They run with llama.cpp, reusing Lumina's llama.cpp and Gemma 4 when Lumina is installed.</p>
 <h2 id="family-en">WorkStudio family</h2>

@@ -1,7 +1,8 @@
 // The "/" menu: every block the editor can insert, plus AI and file actions.
 import type { Editor, Range } from "@tiptap/core";
 import { t } from "../lib/i18n";
-import type { SuggestItem } from "./extensions";
+import { setToggleHeading, type SuggestItem } from "./extensions";
+import { insertColumns } from "./columns";
 
 export type SlashHooks = {
   attach: (editor: Editor) => void;
@@ -18,6 +19,7 @@ export function slashItems(hooks: SlashHooks) {
     { group: "Básicos", title: "Título 1", hint: "#", icon: "h1", run: (e, r) => del(e, r).setHeading({ level: 1 }).run() },
     { group: "Básicos", title: "Título 2", hint: "##", icon: "h2", run: (e, r) => del(e, r).setHeading({ level: 2 }).run() },
     { group: "Básicos", title: "Título 3", hint: "###", icon: "h3", run: (e, r) => del(e, r).setHeading({ level: 3 }).run() },
+    { group: "Básicos", title: "Título 4", hint: "####", icon: "h4", run: (e, r) => del(e, r).setHeading({ level: 4 }).run() },
     { group: "Básicos", title: "Lista", hint: "-", icon: "list", run: (e, r) => del(e, r).toggleBulletList().run() },
     { group: "Básicos", title: "Lista numerada", hint: "1.", icon: "numbered", run: (e, r) => del(e, r).toggleOrderedList().run() },
     { group: "Básicos", title: "Tareas", hint: "[ ]", icon: "task", run: (e, r) => del(e, r).toggleTaskList().run() },
@@ -36,6 +38,26 @@ export function slashItems(hooks: SlashHooks) {
       icon: "toggle",
       run: (e, r) => del(e, r).setDetails().run(),
     },
+    ...[1, 2, 3].map((n) => ({
+      group: "Bloques",
+      title: `Título desplegable ${n}`,
+      hint: "#".repeat(n) + " ▸",
+      icon: "toggleh",
+      run: (e: Editor, r: Range) => {
+        del(e, r).run();
+        setToggleHeading(e, n);
+      },
+    })),
+    ...[2, 3, 4].map((n) => ({
+      group: "Bloques",
+      title: `${n} columnas`,
+      hint: "",
+      icon: "columns",
+      run: (e: Editor, r: Range) => {
+        del(e, r).run();
+        insertColumns(e, n);
+      },
+    })),
     { group: "Bloques", title: "Código", hint: "```", icon: "code", run: (e, r) => del(e, r).toggleCodeBlock().run() },
     {
       group: "Bloques",
@@ -98,6 +120,13 @@ export function slashItems(hooks: SlashHooks) {
     "Título 1": "h1 heading title titulo",
     "Título 2": "h2 heading subtitulo",
     "Título 3": "h3 heading",
+    "Título 4": "h4 heading",
+    "Título desplegable 1": "toggle heading h1 desplegable titulo fold",
+    "Título desplegable 2": "toggle heading h2 desplegable titulo fold",
+    "Título desplegable 3": "toggle heading h3 desplegable titulo fold",
+    "2 columnas": "columns cols columnas layout side",
+    "3 columnas": "columns cols columnas layout side",
+    "4 columnas": "columns cols columnas layout side",
     Lista: "bullet list ul",
     "Lista numerada": "numbered ordered ol",
     Tareas: "todo task checkbox check tarea",

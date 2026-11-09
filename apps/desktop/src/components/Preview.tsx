@@ -1,10 +1,13 @@
-import { useEffect, useRef, useState } from "react";
-import { X, ArrowSquareOut, CornersOut, CornersIn, DownloadSimple, FolderOpen, MagnifyingGlassPlus, MagnifyingGlassMinus } from "@phosphor-icons/react";
-import { api, baseName, extOf, fileUrl, humanSize, isAudio, isImage, isVideo } from "../lib/api";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { X, ArrowSquareOut, CornersOut, CornersIn, DownloadSimple, FolderOpen, MagnifyingGlassPlus, MagnifyingGlassMinus, ArrowsOutSimple, SidebarSimple } from "@phosphor-icons/react";
+import { api, baseName, extOf, fileUrl, humanSize, isAudio, isHtml, isImage, isSheet, isVideo } from "../lib/api";
 import { useStore } from "../lib/store";
 import { t } from "../lib/i18n";
 import { renderMd } from "../lib/render";
 import { FileIcon } from "./FileIcon";
+const ArtifactView = lazy(() => import("./ArtifactView").then((m) => ({ default: m.ArtifactView })));
+const SheetEditor = lazy(() => import("./SheetEditor").then((m) => ({ default: m.SheetEditor })));
+const PdfView = lazy(() => import("./PdfView").then((m) => ({ default: m.PdfView })));
 
 const TEXT = /\.(txt|log|json|js|ts|tsx|jsx|py|rs|go|java|c|cpp|h|css|scss|html|xml|yaml|yml|toml|ini|sh|sql|rb|php|swift|kt)$/i;
 const OFFICE = /\.(docx|xlsx|xlsm|xls|ods|pptx|csv|tsv)$/i;
@@ -22,6 +25,7 @@ function Body({ path }: { path: string }) {
     setErr("");
     setSheet(0);
     setZoom(1);
+    if (isHtml(path) || isSheet(path)) return;
     if (OFFICE.test(path)) api.preview(path).then(setData).catch((e) => setErr(e.message));
     else if (TEXT.test(path) || /\.(md|markdown)$/i.test(path))
       fetch(url)
@@ -31,6 +35,18 @@ function Body({ path }: { path: string }) {
   }, [path, url]);
 
   if (err) return <div className="pv-empty">{err}</div>;
+  if (isHtml(path))
+    return (
+      <Suspense fallback={<Loading />}>
+        <ArtifactView path={path} />
+      </Suspense>
+    );
+  if (isSheet(path))
+    return (
+      <Suspense fallback={<Loading />}>
+        <SheetEditor path={path} />
+      </Suspense>
+    );
   if (isImage(path))
     return (
       <div className="pv-image">
@@ -46,7 +62,11 @@ function Body({ path }: { path: string }) {
         <img src={url} alt="" style={{ width: `${zoom * 100}%` }} />
       </div>
     );
-  if (extOf(path) === "pdf") return <iframe className="pv-pdf" src={url} title={baseName(path)} />;
+  if (extOf(path) === "pdf") return (
+      <Suspense fallback={<Loading />}>
+        <PdfView url={url} />
+      </Suspense>
+    );
   if (isVideo(path)) return <video className="pv-media" src={url} controls />;
   if (isAudio(path))
     return (
@@ -174,7 +194,7 @@ function Loading() {
   return <div className="pv-loading" />;
 }
 
-function Head({ path, floating, onClose }: { path: string; floating: boolean; onClose: () => void }) {
+function Head({ path, floating, onClose, page = false }: { path: string; floating: boolean; onClose: () => void; page?: boolean }) {
   const [size, setSize] = useState<number | null>(null);
   useEffect(() => {
     fetch(fileUrl(path), { method: "HEAD" })
@@ -192,6 +212,17 @@ function Head({ path, floating, onClose }: { path: string; floating: boolean; on
         </span>
       </div>
       <div className="push" />
+      {!page && (isHtml(path) || isSheet(path)) && (
+        <button className="btn-icon" title={t("Abrir en grande")} onClick={() => (useStore.setState({ floating: null, panel: null }), useStore.getState().go({ kind: "file", path }))}>
+          <ArrowsOutSimple size={16} />
+        </button>
+      )}
+      {page && (
+        <button className="btn-icon" title={t("Ver al costado")} onClick={() => (useStore.getState().goBack(), useStore.getState().setPanel({ kind: "preview", path }))}>
+          <SidebarSimple size={16} />
+        </button>
+      )}
+      {!page && (
       <button
         className="btn-icon"
         title={floating ? t("Volver al costado") : t("Ventana flotante")}
@@ -202,6 +233,7 @@ function Head({ path, floating, onClose }: { path: string; floating: boolean; on
       >
         {floating ? <CornersIn size={16} /> : <CornersOut size={16} />}
       </button>
+      )}
       <a className="btn-icon" title={t("Descargar")} href={fileUrl(path, true)} download>
         <DownloadSimple size={16} />
       </a>
@@ -249,6 +281,18 @@ export function FloatingPreview({ path }: { path: string }) {
       <div onMouseDown={drag} className="float-drag">
         <Head path={path} floating onClose={() => useStore.setState({ floating: null })} />
       </div>
+      <div className="pv-body">
+        <Body path={path} />
+      </div>
+    </div>
+  );
+}
+
+/** A file in the whole page (artifacts and spreadsheets). */
+export function FilePage({ path }: { path: string }) {
+  return (
+    <div className="file-page">
+      <Head path={path} floating={false} page onClose={() => useStore.getState().goBack()} />
       <div className="pv-body">
         <Body path={path} />
       </div>

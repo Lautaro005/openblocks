@@ -599,6 +599,7 @@ const EDIT_KIND: Record<string, [any, string]> = {
   folder: [FolderSimplePlus, "Carpeta nueva"],
   move: [ArrowRight, "Movida"],
   delete: [Trash, "En la papelera"],
+  replace: [FileText, "Archivo reescrito"],
 };
 
 function EditCard({ e }: { e: any }) {
@@ -610,7 +611,17 @@ function EditCard({ e }: { e: any }) {
     <div className={`edit-card ${undone ? "undone" : ""}`}>
       <div className="edit-icon">{isFile && e.action === "create" ? <FileIcon size={14} /> : <I size={14} />}</div>
       <div className="edit-meta">
-        <span>{isFile && e.action === "create" ? t("Archivo guardado") : t(label)}</span>
+        <span>
+          {isFile && e.action === "create"
+            ? /\.html?$/i.test(e.path)
+              ? t("Artefacto nuevo")
+              : /\.(xlsx|csv|tsv)$/i.test(e.path)
+                ? t("Planilla nueva")
+                : t("Archivo guardado")
+            : isFile && e.action === "edit"
+              ? t("Archivo reescrito")
+              : t(label)}
+        </span>
         <b title={where || e.path}>{e.title}</b>
       </div>
       {!undone && (

@@ -172,6 +172,11 @@ fn desktop(port: u16) {
                         .map(|v| v.into_iter().filter_map(|p| p.into_path().ok()).collect()),
                 }
             }));
+            let zh = app.handle().clone();
+            openblocks_core::set_zoomer(Box::new(move |f| {
+                zh.get_webview_window("main")
+                    .is_some_and(|w| w.set_zoom(f).is_ok())
+            }));
             let url: tauri::Url = start.parse().expect("url");
             let base_c = base.clone();
             // Only macOS changes the builder below.

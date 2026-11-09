@@ -3,7 +3,7 @@ import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
 import { TaskList, TaskItem } from "@tiptap/extension-list";
 import { Table, TableRow, TableHeader, TableCell } from "@tiptap/extension-table";
-import { Details, DetailsSummary, DetailsContent } from "@tiptap/extension-details";
+import { DetailsSummary, DetailsContent } from "@tiptap/extension-details";
 import Highlight from "@tiptap/extension-highlight";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import { Placeholder } from "@tiptap/extensions";
@@ -46,6 +46,9 @@ import {
   TextHOne,
   TextHTwo,
   TextHThree,
+  TextHFour,
+  Columns as ColumnsIcon,
+  CaretCircleDown,
   TextT,
   ListBullets,
   ListNumbers,
@@ -75,7 +78,8 @@ import { isMac, useStore } from "../lib/store";
 import { FindReplace, findState } from "./find";
 import { BlockSelection, attachMarquee } from "./marquee";
 import { FindBar } from "./FindBar";
-import { Callout, Embed, Shortcuts, SlashCommand, TagHighlight, WikiLink, WikiSuggest, usePopup, type SuggestItem } from "./extensions";
+import { Callout, Embed, Shortcuts, SlashCommand, TagHighlight, ToggleDetails, WikiLink, WikiSuggest, setToggleHeading, usePopup, type SuggestItem } from "./extensions";
+import { Column, Columns, MAX_COLUMNS, dropBeside, insertColumns } from "./columns";
 import { slashItems } from "./slash";
 import { matchCombo, showCombo } from "../lib/keys";
 import { ModelPicker } from "../components/AiPanel";
@@ -88,6 +92,9 @@ const ICONS: Record<string, any> = {
   h1: TextHOne,
   h2: TextHTwo,
   h3: TextHThree,
+  h4: TextHFour,
+  toggleh: CaretCircleDown,
+  columns: ColumnsIcon,
   list: ListBullets,
   numbered: ListNumbers,
   task: CheckSquare,
@@ -159,7 +166,7 @@ export const Editor = forwardRef<EditorHandle, Props>(function Editor({ page, on
     extensions: [
       StarterKit.configure({
         codeBlock: false,
-        heading: { levels: [1, 2, 3] },
+        heading: { levels: [1, 2, 3, 4] },
         link: { openOnClick: false, autolink: true, linkOnPaste: true, HTMLAttributes: { rel: null, target: null } },
         dropcursor: { color: "var(--ink)", width: 3 },
       }),
@@ -170,7 +177,9 @@ export const Editor = forwardRef<EditorHandle, Props>(function Editor({ page, on
       TableRow,
       TableHeader,
       TableCell,
-      Details.configure({ persist: false, HTMLAttributes: { class: "toggle" } }),
+      ToggleDetails.configure({ persist: false, HTMLAttributes: { class: "toggle" } }),
+      Columns,
+      Column,
       DetailsSummary,
       FindReplace,
       BlockSelection,
@@ -202,9 +211,16 @@ export const Editor = forwardRef<EditorHandle, Props>(function Editor({ page, on
       }),
       Placeholder.configure({
         includeChildren: true,
-        placeholder: ({ node, editor }) => {
+        placeholder: ({ node, editor, pos }) => {
           if (node.type.name === "heading") return t("Título");
           if (node.type.name === "detailsSummary") return t("Desplegable");
+          if (node.type.name === "paragraph" && pos != null) {
+            // An empty column says what it is for.
+            try {
+              const $p = editor.state.doc.resolve(pos);
+              if ($p.parent.type.name === "column" && $p.parent.childCount === 1) return t("Columna");
+            } catch {}
+          }
           if (editor.isEmpty) return t("Escribí, o tocá '/' para insertar un bloque…");
           return t("Escribí '/' para comandos");
         },
@@ -802,6 +818,7 @@ function FormatBar({ editor, onAI }: { editor: TEditor; onAI: (a: string, label:
               ["Título 1", TextHOne, () => editor.chain().focus().setHeading({ level: 1 }).run()],
               ["Título 2", TextHTwo, () => editor.chain().focus().setHeading({ level: 2 }).run()],
               ["Título 3", TextHThree, () => editor.chain().focus().setHeading({ level: 3 }).run()],
+              ["Título 4", TextHFour, () => editor.chain().focus().setHeading({ level: 4 }).run()],
               ["Lista", ListBullets, () => editor.chain().focus().toggleBulletList().run()],
               ["Lista numerada", ListNumbers, () => editor.chain().focus().toggleOrderedList().run()],
               ["Tareas", CheckSquare, () => editor.chain().focus().toggleTaskList().run()],
@@ -870,30 +887,59 @@ function SuggestPopup() {
 // ---------- block handle (drag to move, + to insert, menu) ----------
 
 function BlockHandle({ editor, wrap, onAsk }: { editor: TEditor; wrap: React.RefObject<HTMLDivElement | null>; onAsk: (md: string) => void }) {
-  const [block, setBlock] = useState<{ top: number; el: HTMLElement } | null>(null);
+  // `nested`: a block inside a column (only the grip fits in the gap between columns).
+  const [block, setBlock] = useState<{ top: number; left?: number; el: HTMLElement; nested: boolean } | null>(null);
   const [menu, setMenu] = useState(false);
+  const [drop, setDrop] = useState<null | { pos: number; side: "left" | "right"; x: number; top: number; height: number }>(null);
+  const dropRef = useRef(drop);
+  dropRef.current = drop;
   const hideT = useRef<number>(0);
+
+  /** The block under (x, y): a top-level block, or a block inside the column under the pointer. */
+  const blockAt = (x: number, y: number): { el: HTMLElement; nested: boolean } | null => {
+    const dom = editor.view.dom as HTMLElement;
+    const kids = Array.from(dom.children) as HTMLElement[];
+    const hit = kids.find((k) => {
+      const r = k.getBoundingClientRect();
+      return y >= r.top - 4 && y <= r.bottom + 4;
+    });
+    if (!hit) return null;
+    if (hit.classList.contains("ob-columns-wrap")) {
+      const cols = Array.from(hit.querySelectorAll<HTMLElement>(":scope > .ob-columns > .ob-column"));
+      const col = cols.find((c) => {
+        const r = c.getBoundingClientRect();
+        return x >= r.left - 14 && x <= r.right + 14;
+      });
+      const inner = col
+        ? (Array.from(col.children) as HTMLElement[]).find((k) => {
+            const r = k.getBoundingClientRect();
+            return y >= r.top - 4 && y <= r.bottom + 4;
+          })
+        : null;
+      if (inner) return { el: inner, nested: true };
+    }
+    return { el: hit, nested: false };
+  };
 
   useEffect(() => {
     const w = wrap.current;
     if (!w) return;
     const move = (e: MouseEvent) => {
       if (menu) return;
-      const dom = editor.view.dom as HTMLElement;
-      const kids = Array.from(dom.children) as HTMLElement[];
-      const y = e.clientY;
-      const hit = kids.find((k) => {
-        const r = k.getBoundingClientRect();
-        return y >= r.top - 4 && y <= r.bottom + 4;
-      });
+      const hit = blockAt(e.clientX, e.clientY);
       if (hit) {
         window.clearTimeout(hideT.current);
         const wr = w.getBoundingClientRect();
-        const r = hit.getBoundingClientRect();
-        const style = getComputedStyle(hit);
+        const r = hit.el.getBoundingClientRect();
+        const style = getComputedStyle(hit.el);
         const lh = parseFloat(style.lineHeight) || 24;
         const firstLine = Math.min(r.height, lh);
-        setBlock({ top: r.top - wr.top + firstLine / 2 - 12 + (parseFloat(style.paddingTop) || 0), el: hit });
+        setBlock({
+          top: r.top - wr.top + firstLine / 2 - 12 + (parseFloat(style.paddingTop) || 0),
+          left: hit.nested ? r.left - wr.left - 26 : undefined,
+          el: hit.el,
+          nested: hit.nested,
+        });
       }
     };
     const leave = () => {
@@ -907,16 +953,27 @@ function BlockHandle({ editor, wrap, onAsk }: { editor: TEditor; wrap: React.Ref
     };
   }, [editor, wrap, menu]);
 
-  const blockPos = (): number | null => {
-    if (!block) return null;
+  /** Where a block element starts in the document. */
+  const posOf = (el: HTMLElement): number | null => {
+    const view = editor.view;
+    let found: number | null = null;
+    view.state.doc.forEach((_n, offset) => {
+      if (found == null && view.nodeDOM(offset) === el) found = offset;
+    });
+    if (found != null) return found;
     try {
-      const pos = editor.view.posAtDOM(block.el, 0);
-      const $p = editor.state.doc.resolve(Math.min(pos, editor.state.doc.content.size));
-      return $p.depth >= 1 ? $p.before(1) : pos;
+      const pos = view.posAtDOM(el, 0);
+      const $p = view.state.doc.resolve(Math.min(pos, view.state.doc.content.size));
+      for (let d = $p.depth; d > 0; d--) {
+        if (d === 1 || $p.node(d - 1).type.name === "column") return $p.before(d);
+      }
+      return pos;
     } catch {
       return null;
     }
   };
+
+  const blockPos = (): number | null => (block ? posOf(block.el) : null);
 
   const onDragStart = (e: React.DragEvent) => {
     const pos = blockPos();
@@ -934,6 +991,62 @@ function BlockHandle({ editor, wrap, onAsk }: { editor: TEditor; wrap: React.Ref
     e.dataTransfer.setData("text/plain", view.state.doc.textBetween(sel.from, sel.to, "\n"));
     e.dataTransfer.setDragImage(block.el, 0, 0);
   };
+
+  // Dragging a block to the side of another one puts them in columns.
+  useEffect(() => {
+    const w = wrap.current;
+    if (!w) return;
+    const over = (e: DragEvent) => {
+      const view = editor.view;
+      const sel = view.state.selection;
+      const dragging = (view as any).dragging;
+      if (!dragging || !(sel instanceof NodeSelection) || sel.node.type.name === "columns") return setDrop(null);
+      const hit = blockAt(e.clientX, e.clientY);
+      if (!hit) return setDrop(null);
+      const r = hit.el.getBoundingClientRect();
+      const edge = Math.min(90, r.width * 0.18);
+      const side = e.clientX > r.right - edge ? "right" : e.clientX < r.left - 6 ? "left" : null;
+      const pos = side ? posOf(hit.el) : null;
+      if (!side || pos == null || pos === sel.from) return setDrop(null);
+      if (hit.nested) {
+        const row = hit.el.closest(".ob-columns");
+        if (row && row.children.length >= MAX_COLUMNS) return setDrop(null);
+      }
+      const wr = w.getBoundingClientRect();
+      setDrop({ pos, side, x: (side === "right" ? r.right + 6 : r.left - 9) - wr.left, top: r.top - wr.top, height: r.height });
+    };
+    const end = () => setDrop(null);
+    w.addEventListener("dragover", over);
+    w.addEventListener("dragleave", (e) => !w.contains(e.relatedTarget as any) && end());
+    window.addEventListener("dragend", end);
+    window.addEventListener("drop", () => setTimeout(end));
+    return () => {
+      w.removeEventListener("dragover", over);
+      window.removeEventListener("dragend", end);
+    };
+  }, [editor, wrap]);
+
+  useEffect(() => {
+    document.body.classList.toggle("ob-side-drop", !!drop);
+  }, [drop]);
+
+  // The editor asks before its own drop: a side drop wins.
+  useEffect(() => {
+    const dom = editor.view.dom as HTMLElement;
+    const onDrop = (e: DragEvent) => {
+      const d = dropRef.current;
+      const view = editor.view;
+      const sel = view.state.selection;
+      if (!d || !(sel instanceof NodeSelection)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      (view as any).dragging = null;
+      dropBeside(view, d.pos, d.side, sel.node, sel.from, sel.to);
+      setDrop(null);
+    };
+    dom.addEventListener("drop", onDrop, true);
+    return () => dom.removeEventListener("drop", onDrop, true);
+  }, [editor]);
 
   const insertBelow = () => {
     const pos = blockPos();
@@ -958,65 +1071,111 @@ function BlockHandle({ editor, wrap, onAsk }: { editor: TEditor; wrap: React.Ref
       navigator.clipboard.writeText(md);
     }
     if (what === "ai") onAsk(docToMd({ type: "doc", content: [node.toJSON()] } as any).trim());
+    if (what === "uncolumns" && node.type.name === "columns") {
+      // Back to plain blocks, one column after the other.
+      const blocks: any[] = [];
+      node.forEach((col) => col.forEach((b) => blocks.push(b)));
+      editor.view.dispatch(editor.state.tr.replaceWith(pos, pos + node.nodeSize, blocks));
+    }
+    if (what.startsWith("columns:")) {
+      editor.view.dispatch(editor.state.tr.setSelection(TextSelection.near(editor.state.doc.resolve(pos + 1))));
+      insertColumns(editor, Number(what.slice(8)));
+    }
     if (what.startsWith("turn:")) {
       editor.view.dispatch(editor.state.tr.setSelection(TextSelection.create(editor.state.doc, pos + 1)));
       const c = editor.chain().focus();
       const k = what.slice(5);
       if (k === "p") c.setParagraph().run();
-      else if (k.startsWith("h")) c.setHeading({ level: Number(k[1]) as 1 | 2 | 3 }).run();
+      else if (k.startsWith("toggle")) setToggleHeading(editor, Number(k.slice(6)));
+      else if (k.startsWith("h")) c.setHeading({ level: Number(k[1]) as 1 | 2 | 3 | 4 }).run();
       else if (k === "ul") c.toggleBulletList().run();
       else if (k === "task") c.toggleTaskList().run();
       else if (k === "quote") c.toggleBlockquote().run();
     }
   };
 
-  if (!block || !editor.isEditable) return null;
+  const isColumns = !!block?.el.classList.contains("ob-columns-wrap");
+  if (!block && !drop) return null;
+  if (!editor.isEditable) return null;
   return (
-    <div className="block-handle" style={{ top: block.top }} onMouseEnter={() => window.clearTimeout(hideT.current)}>
-      <button className="handle-btn" onClick={insertBelow} title={t("Insertar un bloque debajo")}>
-        <Plus size={15} />
-      </button>
-      <button className="handle-btn grip" draggable onDragStart={onDragStart} onClick={() => setMenu(!menu)} title={t("Arrastrá para mover · clic para opciones")}>
-        <DotsSixVertical size={16} weight="bold" />
-      </button>
-      {menu && (
-        <div className="menu handle-menu" onMouseLeave={() => setMenu(false)}>
-          <button className="menu-item" onClick={() => act("ai")}>
-            <Sparkle size={15} /> {t("Preguntarle a la IA")}
+    <>
+      {drop && <div className="ob-col-drop" style={{ left: drop.x, top: drop.top, height: drop.height }} />}
+      {block && (
+        <div
+          className={`block-handle ${block.nested ? "nested" : ""}`}
+          style={{ top: block.top, left: block.left }}
+          onMouseEnter={() => window.clearTimeout(hideT.current)}
+        >
+          {!block.nested && (
+            <button className="handle-btn" onClick={insertBelow} title={t("Insertar un bloque debajo")}>
+              <Plus size={15} />
+            </button>
+          )}
+          <button className="handle-btn grip" draggable onDragStart={onDragStart} onClick={() => setMenu(!menu)} title={t("Arrastrá para mover · clic para opciones")}>
+            <DotsSixVertical size={16} weight="bold" />
           </button>
-          <div className="menu-sep" />
-          <div className="menu-label">{t("Convertir en")}</div>
-          <button className="menu-item" onClick={() => act("turn:p")}>
-            <TextT size={15} /> {t("Texto")}
-          </button>
-          <button className="menu-item" onClick={() => act("turn:h1")}>
-            <TextHOne size={15} /> {t("Título 1")}
-          </button>
-          <button className="menu-item" onClick={() => act("turn:h2")}>
-            <TextHTwo size={15} /> {t("Título 2")}
-          </button>
-          <button className="menu-item" onClick={() => act("turn:ul")}>
-            <ListBullets size={15} /> {t("Lista")}
-          </button>
-          <button className="menu-item" onClick={() => act("turn:task")}>
-            <CheckSquare size={15} /> {t("Tareas")}
-          </button>
-          <button className="menu-item" onClick={() => act("turn:quote")}>
-            <Quotes size={15} /> {t("Cita")}
-          </button>
-          <div className="menu-sep" />
-          <button className="menu-item" onClick={() => act("duplicate")}>
-            <Copy size={15} /> {t("Duplicar")}
-          </button>
-          <button className="menu-item" onClick={() => act("copy")}>
-            <CodeBlock size={15} /> {t("Copiar como Markdown")}
-          </button>
-          <button className="menu-item danger" onClick={() => act("delete")}>
-            <Trash size={15} /> {t("Borrar")}
-          </button>
+          {menu && (
+            <div className="menu handle-menu" onMouseLeave={() => setMenu(false)}>
+              <button className="menu-item" onClick={() => act("ai")}>
+                <Sparkle size={15} /> {t("Preguntarle a la IA")}
+              </button>
+              <div className="menu-sep" />
+              {isColumns ? (
+                <button className="menu-item" onClick={() => act("uncolumns")}>
+                  <ColumnsIcon size={15} /> {t("Quitar las columnas")}
+                </button>
+              ) : (
+                <>
+                  <div className="menu-label">{t("Convertir en")}</div>
+                  <button className="menu-item" onClick={() => act("turn:p")}>
+                    <TextT size={15} /> {t("Texto")}
+                  </button>
+                  <button className="menu-item" onClick={() => act("turn:h1")}>
+                    <TextHOne size={15} /> {t("Título 1")}
+                  </button>
+                  <button className="menu-item" onClick={() => act("turn:h2")}>
+                    <TextHTwo size={15} /> {t("Título 2")}
+                  </button>
+                  <button className="menu-item" onClick={() => act("turn:h3")}>
+                    <TextHThree size={15} /> {t("Título 3")}
+                  </button>
+                  <button className="menu-item" onClick={() => act("turn:h4")}>
+                    <TextHFour size={15} /> {t("Título 4")}
+                  </button>
+                  <button className="menu-item" onClick={() => act("turn:toggle2")}>
+                    <CaretCircleDown size={15} /> {t("Título desplegable")}
+                  </button>
+                  <button className="menu-item" onClick={() => act("turn:ul")}>
+                    <ListBullets size={15} /> {t("Lista")}
+                  </button>
+                  <button className="menu-item" onClick={() => act("turn:task")}>
+                    <CheckSquare size={15} /> {t("Tareas")}
+                  </button>
+                  <button className="menu-item" onClick={() => act("turn:quote")}>
+                    <Quotes size={15} /> {t("Cita")}
+                  </button>
+                  {!block.nested && (
+                    <button className="menu-item" onClick={() => act("columns:2")}>
+                      <ColumnsIcon size={15} /> {t("Columnas")}
+                    </button>
+                  )}
+                </>
+              )}
+              <div className="menu-sep" />
+              <button className="menu-item" onClick={() => act("duplicate")}>
+                <Copy size={15} /> {t("Duplicar")}
+              </button>
+              <button className="menu-item" onClick={() => act("copy")}>
+                <CodeBlock size={15} /> {t("Copiar como Markdown")}
+              </button>
+              <button className="menu-item danger" onClick={() => act("delete")}>
+                <Trash size={15} /> {t("Borrar")}
+              </button>
+            </div>
+          )}
         </div>
       )}
-    </div>
+    </>
   );
 }
 

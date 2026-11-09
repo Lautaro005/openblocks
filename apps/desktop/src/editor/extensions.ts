@@ -3,7 +3,8 @@
 import { Extension, Node, mergeAttributes, type Editor, type Range } from "@tiptap/core";
 import { ReactNodeViewRenderer } from "@tiptap/react";
 import Suggestion, { type SuggestionProps } from "@tiptap/suggestion";
-import { Plugin, PluginKey } from "@tiptap/pm/state";
+import { Plugin, PluginKey, TextSelection } from "@tiptap/pm/state";
+import { Details } from "@tiptap/extension-details";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import { create } from "zustand";
 import { EmbedView, CalloutView } from "./NodeViews";
@@ -266,6 +267,7 @@ export const Shortcuts = Extension.create<{ onSave: () => void }>({
       "Mod-Alt-1": () => this.editor.chain().focus().toggleHeading({ level: 1 }).run(),
       "Mod-Alt-2": () => this.editor.chain().focus().toggleHeading({ level: 2 }).run(),
       "Mod-Alt-3": () => this.editor.chain().focus().toggleHeading({ level: 3 }).run(),
+      "Mod-Alt-4": () => this.editor.chain().focus().toggleHeading({ level: 4 }).run(),
       "Mod-Alt-0": () => this.editor.chain().focus().setParagraph().run(),
     };
   },
@@ -320,3 +322,70 @@ export const TagHighlight = Extension.create<{ onOpen: (tag: string) => void }>(
     ];
   },
 });
+
+// ---------- toggle headings: a toggle whose title is a heading ----------
+
+/** Toggles with a `heading` level (0 = a plain toggle). Stored as <details data-heading="2">. */
+export const ToggleDetails = Details.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      heading: {
+        default: 0,
+        parseHTML: (el: HTMLElement) => Math.max(0, Math.min(4, Number(el.dataset.heading) || 0)),
+        renderHTML: (a: { heading: number }) => (a.heading ? { "data-heading": String(a.heading) } : {}),
+      },
+    };
+  },
+  addNodeView() {
+    const parent = this.parent?.();
+    if (!parent) return null;
+    return (props: any) => {
+      const v: any = parent(props);
+      const set = (n: any) => {
+        if (n.attrs.heading) v.dom.setAttribute("data-heading", String(n.attrs.heading));
+        else v.dom.removeAttribute("data-heading");
+      };
+      set(props.node);
+      const up = v.update?.bind(v);
+      v.update = (n: any, ...rest: any[]) => {
+        const ok = up ? up(n, ...rest) : n.type === props.node.type;
+        if (ok) set(n);
+        return ok;
+      };
+      return v;
+    };
+  },
+});
+
+/** Turns the block with the cursor into a toggle heading of `level` (its text becomes the title). */
+export function setToggleHeading(editor: Editor, level: number) {
+  const { state } = editor;
+  const { $from } = state.selection;
+  const schema = state.schema;
+  // Already in a toggle's title: change its level.
+  for (let d = $from.depth; d > 0; d--) {
+    const n = $from.node(d);
+    if (n.type.name === "details") {
+      editor.view.dispatch(state.tr.setNodeMarkup($from.before(d), undefined, { ...n.attrs, heading: level }));
+      return true;
+    }
+    if (n.type.name === "detailsContent") break;
+  }
+  const block = $from.parent;
+  if (!block.isTextblock) return false;
+  const from = $from.before($from.depth);
+  const to = $from.after($from.depth);
+  const node = schema.nodes.details.create({ heading: level, open: true }, [
+    schema.nodes.detailsSummary.create(null, block.content),
+    schema.nodes.detailsContent.create(null, schema.nodes.paragraph.create()),
+  ]);
+  const tr = state.tr.replaceWith(from, to, node);
+  tr.setSelection(TextSelection.near(tr.doc.resolve(from + 2 + block.content.size)));
+  editor.view.dispatch(tr.scrollIntoView());
+  editor.view.focus();
+  // A new toggle starts open, so Enter goes on into its content.
+  const dom = editor.view.nodeDOM(from) as HTMLElement | null;
+  if (dom && !dom.classList.contains("is-open")) (dom.querySelector(":scope > button") as HTMLElement | null)?.click();
+  return true;
+}

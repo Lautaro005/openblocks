@@ -57,8 +57,9 @@ anyway".
 | | |
 |---|---|
 | **Your folder, your files** | A vault is any folder. Pages are `.md` files with Obsidian's syntax: `[[links]]`, `![[embeds]]`, `#tags`, YAML properties, `> [!note]` callouts. Open an existing Obsidian vault as is; edits from other apps show up at once. |
-| **Block editor** | `/` menu, headings, tasks, tables, highlighted code, callouts, toggles, drag handles, Markdown shortcuts, paste Markdown as blocks, page properties, daily notes and templates. `⌘F` find and replace (case, whole word, regex), and a desktop-style rectangle to select many blocks at once. No separate edit mode: the document is the view. |
-| **Files** | Drop any file on a page. PDF, Word, Excel, CSV, PowerPoint, images, audio and video preview on the side or in a floating window — read locally, no internet. |
+| **Block editor** | `/` menu, headings, tasks, tables, highlighted code, callouts, toggles, drag handles, Markdown shortcuts, paste Markdown as blocks, page properties, daily notes and templates. Columns like Notion's (up to 4, drag a block beside another), toggle headings, `⌘F` find and replace (case, whole word, regex), and a desktop-style rectangle to select many blocks at once. No separate edit mode: the document is the view. |
+| **HTML artifacts** | `.html` pages that run inside the app, like Claude's artifacts: a View/Code toggle, spreadsheets linked as live data (`openblocks.table()`), embedded in pages with `![[file.html]]`, and made by the AI on request. Sandboxed: no access to your vault or the network. |
+| **Files** | Drop any file on a page. PDF, Word, Excel, CSV, PowerPoint, images, audio and video preview on the side or in a floating window — read locally, no internet. PDFs open in a built-in viewer with zoom and selectable text, and `.xlsx`/`.csv` in a spreadsheet editor with formulas. |
 | **Import from Notion** | Settings → Import brings a whole Notion workspace — pages, subpages, databases with typed properties, images and files — with an integration token or Notion's own `.zip` export. Links become `[[wikilinks]]`. |
 | **Sidebar and folders** | A resizable sidebar that floats over the page when hidden (mouse to the left edge). Folders open with a click on their name and list their contents sorted by name, date, type or by hand, as a list or a grid. |
 | **Databases** | Any folder as a table or a board: pages are rows, properties are editable columns, stored in each page's frontmatter. |
@@ -68,7 +69,8 @@ anyway".
 | **Your models** | Ollama and LM Studio (local), Claude Code and Codex (your login), Anthropic, OpenAI-compatible APIs and OpenRouter (your key), your OpenCue agents, and Gemma 4 running on your computer. No accounts, no servers of ours. |
 | **Local vision** | Gemma 4 reads the text of images and scanned PDFs; EmbeddingGemma 2 finds images in the vault by what they show. Both run with llama.cpp — from Lumina when it is installed, so nothing is downloaded twice. |
 | **MCP** | `openblocks mcp` gives Claude Code, Codex, Cursor and AI WorkStudio the same tools, for one vault or all of them — and, through a Cloudflare tunnel with a secret token, to agents in the cloud. |
-| **Everything else** | `⌘K` search and commands, favorites, Spanish and English, light and dark themes, print to PDF, export to Markdown/HTML. |
+| **Appearance** | Settings → Appearance: light or dark, four palettes (warm, neutral, sepia, high contrast), any accent color, fonts for text, headings and interface (or any font you have installed), text size, line spacing, page width and the size of the whole interface (`⌘+`/`⌘−`). |
+| **Everything else** | `⌘K` search and commands, favorites, Spanish and English, print to PDF, export to Markdown/HTML. |
 
 ## The AI WorkStudio family
 

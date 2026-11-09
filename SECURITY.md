@@ -33,7 +33,7 @@ reproduce and the impact you expect. Remove API keys, page contents and personal
 - **Paths stay inside the vault.** Every path from the UI, the API or an agent is resolved against the vault root;
   absolute paths, `..` and the `.openblocks` folder are refused. Files from the vault are served with
   `Content-Security-Policy: sandbox` and HTML is served as plain text, so a note or attachment cannot run scripts in the
-  app. Rendered Markdown escapes raw HTML, and links open in your system browser, never inside the app window.
+  app (HTML artifacts, below, run only in an isolated frame). Rendered Markdown escapes raw HTML, and links open in your system browser, never inside the app window.
 - **Agents can be undone.** AI agents can only use the tools OpenBlocks gives them (search, read, list, backlinks,
   create, edit, set property, and — only when you turn them on — web search/fetch, brain and Lumina search). Every edit
   keeps a history copy first and shows an Undo card. You can make agents read-only in Settings → AI. Content an agent
@@ -69,6 +69,19 @@ reproduce and the impact you expect. Remove API keys, page contents and personal
   not code-signed yet.
 - **Find and replace** runs entirely in the page: matches and replacements go through the editor (undoable, saved like
   any edit) and regular expressions are evaluated by the browser engine on the page's own text only.
+- **HTML artifacts** (`crates/core/src/artifact.rs`). An `.html` file you open as an artifact (or embed with
+  `![[file.html]]`) does run its scripts, so it is isolated twice: the frame has the `sandbox` attribute and the page is
+  served with `Content-Security-Policy: sandbox allow-scripts` (an opaque origin: no cookies, storage or access to the
+  app), `connect-src 'none'` (no `fetch`, XHR or WebSocket to the app's API, your network or the internet),
+  `form-action 'none'` and `frame-src 'none'`. Scripts and styles may load only from jsDelivr, cdnjs, unpkg and esm.sh;
+  images only from the page itself and from the local server's file route, which it cannot read back. Spreadsheet data
+  reaches the page only because the app reads the files the artifact names in its `openblocks-data` meta tag and writes
+  them into the page before serving it. Every other `.html` in the vault is still served as plain text. An artifact you
+  did not write is code from someone else: open its Code view first if you are unsure.
+- **Spreadsheets** are read and written in Rust (calamine, rust_xlsxwriter) inside the vault; formulas are evaluated by
+  the app's own small engine in the page, never with `eval`.
+- **PDFs** are drawn by pdf.js inside the app (the PDF's own JavaScript and forms are not run); its worker, character
+  maps and fonts are bundled with the app, so nothing is downloaded.
 - **Symbolic links.** A symlink inside your vault is followed like any file. Do not put links to folders you would not
   want an agent to read inside a vault.
 
@@ -77,7 +90,8 @@ reproduce and the impact you expect. Remove API keys, page contents and personal
 In scope: a web page, file or note reaching the local API or running code in the app; path traversal out of the vault;
 API keys leaking to the UI, logs or a provider they do not belong to; an agent editing without leaving a history copy;
 the installers running anything other than the official release; a Notion import writing outside its destination
-folder, or the Notion token being stored, logged or sent anywhere but Notion.
+folder, or the Notion token being stored, logged or sent anywhere but Notion; an HTML artifact reaching the local API,
+the network beyond the allowed CDNs, the vault's files or the app's window.
 
 Out of scope: what a model or provider does with what you send it (see their policies), what the family apps do by
 themselves (report it to their repositories), and anything that needs an attacker who already runs code as your user.

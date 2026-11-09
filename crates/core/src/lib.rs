@@ -6,6 +6,7 @@
 //! HTTP server the UI talks to and the stdio MCP server other agents use.
 
 pub mod ai;
+pub mod artifact;
 pub mod family;
 pub mod http;
 pub mod import;
@@ -17,6 +18,7 @@ pub mod preview;
 pub mod remote;
 pub mod search;
 pub mod settings;
+pub mod sheet;
 pub mod sys;
 pub mod util;
 pub mod vault;
@@ -129,3 +131,17 @@ pub fn pick_folder(prompt: &str) -> Option<PathBuf> {
 
 /// Re-exported so the desktop shell does not need its own anyhow dependency.
 pub use anyhow;
+
+/// Sets the app window's zoom (installed by the desktop shell; `openblocks serve` has none, and the
+/// browser's own zoom does the job there).
+type Zoomer = Box<dyn Fn(f64) -> bool + Send + Sync>;
+static ZOOMER: OnceLock<Zoomer> = OnceLock::new();
+
+pub fn set_zoomer(f: Zoomer) {
+    let _ = ZOOMER.set(f);
+}
+
+/// True when the window could be zoomed.
+pub fn zoom(factor: f64) -> bool {
+    ZOOMER.get().is_some_and(|z| z(factor.clamp(0.5, 2.0)))
+}

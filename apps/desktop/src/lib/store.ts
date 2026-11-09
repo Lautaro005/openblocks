@@ -1,11 +1,14 @@
 import { create } from "zustand";
 import { api, type Model, type Status, type TreeNode, stem } from "./api";
 import { resolveLang, setLang, t, type Lang } from "./i18n";
+import { applyAppearance } from "./appearance";
 
 export type Route =
   | { kind: "home" }
   | { kind: "page"; path: string }
   | { kind: "folder"; path: string }
+  /** A file shown in the whole page: HTML artifacts and spreadsheets. */
+  | { kind: "file"; path: string }
   | { kind: "graph" }
   | { kind: "trash" }
   | { kind: "tag"; tag: string };
@@ -53,6 +56,8 @@ type State = {
   openPath(path: string, kind?: string): void;
   newPage(folder?: string, title?: string, template?: string): Promise<string | null>;
   daily(): Promise<void>;
+  /** New HTML artifact or spreadsheet in a folder, opened right away. */
+  newFile(folder: string, kind: "html" | "xlsx"): Promise<void>;
   setPanel(p: Panel): void;
   togglePanel(kind: "ai"): void;
   askAI(text: string): void;
@@ -145,6 +150,7 @@ export const useStore = create<State>((set, get) => ({
     const lang = resolveLang(settings.language);
     setLang(lang);
     applyTheme(settings.theme);
+    applyAppearance(settings);
     document.documentElement.dataset.width = settings.width || "normal";
     set({ status, settings, lang });
     if (status.vault) {
@@ -153,7 +159,7 @@ export const useStore = create<State>((set, get) => ({
       if (last) {
         try {
           const r = JSON.parse(last) as Route;
-          if (r.kind !== "page" || get().names.has(r.path.toLowerCase().replace(/\.md$/, ""))) set({ route: r });
+          if ((r.kind !== "page" && r.kind !== "file") || get().names.has(r.path.toLowerCase().replace(/\.md$/, ""))) set({ route: r });
         } catch {}
       }
     }
@@ -221,7 +227,11 @@ export const useStore = create<State>((set, get) => ({
     const k = kind ?? (/\.(md|markdown)$/i.test(path) ? "page" : "file");
     if (k === "page") get().go({ kind: "page", path });
     else if (k === "folder") get().go({ kind: "folder", path });
-    else set({ panel: { kind: "preview", path } });
+    else if (/\.(html?|xlsx|xlsm|xls|ods|csv|tsv)$/i.test(path)) {
+      // Artifacts and spreadsheets get the whole page; the side panel showing it closes.
+      get().go({ kind: "file", path });
+      if (get().panel?.kind === "preview") set({ panel: null });
+    } else set({ panel: { kind: "preview", path } });
   },
 
   async newPage(folder = "", title, template) {
@@ -236,6 +246,16 @@ export const useStore = create<State>((set, get) => ({
     } catch (e: any) {
       get().toast(e.message, "error");
       return null;
+    }
+  },
+
+  async newFile(folder, kind) {
+    try {
+      const r = await api.createFile(folder, kind === "html" ? t("Artefacto") : t("Planilla"), kind);
+      await get().refreshTree();
+      get().go({ kind: "file", path: r.path });
+    } catch (e: any) {
+      get().toast(e.message, "error");
     }
   },
 
@@ -264,6 +284,7 @@ export const useStore = create<State>((set, get) => ({
     const lang = resolveLang(settings.language);
     setLang(lang);
     applyTheme(settings.theme);
+    applyAppearance(settings);
     document.documentElement.dataset.width = settings.width || "normal";
     set({ settings, lang });
   },

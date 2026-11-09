@@ -146,6 +146,67 @@ function itemBody(i: Tokens.ListItem): string {
   return para ? o : `<p></p>${o}`;
 }
 
+const COLUMNS_OPEN = /^\s*<div\b[^>]*\bclass="ob-columns"[^>]*>/i;
+const DIV_TAG = /<div\b([^>]*)>|<\/div\s*>/gi;
+
+/** Reads `<div class="ob-columns">` … `</div>` starting at tokens[k]: one column per
+ * `<div class="ob-column">`. Anything inside a column is read as blocks (nested columns too). */
+function takeColumns(tokens: Token[], k: number): { html: string; end: number; rest: Token[] } {
+  const cols: { width: string; tokens: Token[] }[] = [];
+  let cur: { width: string; tokens: Token[] } | null = null;
+  let depth = 0;
+  const push = (text: string) => {
+    if (!text.trim()) return;
+    if (cur) cur.tokens.push(...marked.lexer(text));
+  };
+  for (let i = k; i < tokens.length; i++) {
+    const tk = tokens[i] as any;
+    if (tk.type !== "html") {
+      if (depth >= 2 && cur) cur.tokens.push(tk);
+      continue;
+    }
+    const raw: string = tk.raw;
+    let last = 0;
+    DIV_TAG.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = DIV_TAG.exec(raw))) {
+      const between = raw.slice(last, m.index);
+      last = m.index + m[0].length;
+      if (depth >= 3 && cur) cur.tokens.push({ type: "html", raw: between, text: between } as any);
+      else push(between);
+      const opening = !m[0].startsWith("</");
+      if (opening) {
+        depth++;
+        if (depth === 2) {
+          const w = /data-width="([\d.]+)"/.exec(m[1] ?? "")?.[1] ?? "";
+          cur = { width: w, tokens: [] };
+          cols.push(cur);
+        } else if (depth >= 3 && cur) cur.tokens.push({ type: "html", raw: m[0] + "\n", text: m[0] } as any);
+      } else {
+        if (depth >= 3 && cur) cur.tokens.push({ type: "html", raw: m[0] + "\n", text: m[0] } as any);
+        if (depth === 2) cur = null;
+        depth--;
+        if (depth === 0) {
+          const tail = raw.slice(last);
+          return { html: columnsHtml(cols), end: i, rest: tail.trim() ? marked.lexer(tail) : [] };
+        }
+      }
+    }
+    const tail = raw.slice(last);
+    if (depth >= 3 && cur) cur.tokens.push({ type: "html", raw: tail, text: tail } as any);
+    else push(tail);
+  }
+  return { html: columnsHtml(cols), end: tokens.length - 1, rest: [] };
+}
+
+function columnsHtml(cols: { width: string; tokens: Token[] }[]): string {
+  const list = cols.slice(0, 4);
+  while (list.length < 2) list.push({ width: "", tokens: [] });
+  return `<div data-type="columns">${list
+    .map((c) => `<div data-type="column"${c.width ? ` data-width="${esc(c.width)}"` : ""}>${blocks(c.tokens) || "<p></p>"}</div>`)
+    .join("")}</div>`;
+}
+
 function blocks(tokens: Token[]): string {
   let o = "";
   for (let k = 0; k < tokens.length; k++) {
@@ -154,7 +215,7 @@ function blocks(tokens: Token[]): string {
       case "space":
         break;
       case "heading":
-        o += `<h${Math.min(tk.depth, 3)}>${inline(tk.tokens)}</h${Math.min(tk.depth, 3)}>`;
+        o += `<h${Math.min(tk.depth, 4)}>${inline(tk.tokens)}</h${Math.min(tk.depth, 4)}>`;
         break;
       case "paragraph":
         o += soloEmbed(tk.tokens) ?? `<p>${inline(tk.tokens)}</p>`;
@@ -190,10 +251,17 @@ function blocks(tokens: Token[]): string {
       }
       case "html": {
         const raw: string = tk.raw;
-        const open = /<details[^>]*>\s*(?:<summary>([\s\S]*?)<\/summary>)?([\s\S]*)/i.exec(raw);
+        if (COLUMNS_OPEN.test(raw)) {
+          const r = takeColumns(tokens, k);
+          o += r.html;
+          k = r.end;
+          if (r.rest.length) tokens = [...tokens.slice(0, k + 1), ...r.rest, ...tokens.slice(k + 1)];
+          break;
+        }
+        const open = /<details([^>]*)>\s*(?:<summary>([\s\S]*?)<\/summary>)?([\s\S]*)/i.exec(raw);
         if (open) {
           // Collect everything up to </details>.
-          let rest = open[2] ?? "";
+          let rest = open[3] ?? "";
           const inner: Token[] = [];
           let closed = /<\/details>/i.test(rest);
           rest = rest.replace(/<\/details>\s*$/i, "");
@@ -209,8 +277,10 @@ function blocks(tokens: Token[]): string {
             }
             inner.push(nx);
           }
-          const summary = (open[1] ?? "").trim();
-          o += `<details><summary>${esc(summary)}</summary><div data-type="detailsContent">${blocks(inner) || "<p></p>"}</div></details>`;
+          const summary = (open[2] ?? "").trim();
+          const level = Number(/data-heading="?(\d)/i.exec(open[1] ?? "")?.[1] ?? 0);
+          const head = level >= 1 && level <= 4 ? ` data-heading="${level}"` : "";
+          o += `<details${head}><summary>${esc(summary)}</summary><div data-type="detailsContent">${blocks(inner) || "<p></p>"}</div></details>`;
         } else if (/^<!--[\s\S]*-->\s*$/.test(raw.trim())) {
           o += `<p>${esc(raw.trim())}</p>`;
         } else {
@@ -384,7 +454,16 @@ function blockMd(n: J, tight = false): string {
       const sum = (n.content ?? []).find((c) => c.type === "detailsSummary");
       const body = (n.content ?? []).find((c) => c.type === "detailsContent");
       const title = inlineMd(sum?.content).replace(/</g, "&lt;");
-      return `<details>\n<summary>${title}</summary>\n\n${docMd(body?.content ?? []).replace(/\n+$/, "")}\n\n</details>\n`;
+      const head = n.attrs?.heading ? ` data-heading="${n.attrs.heading}"` : "";
+      return `<details${head}>\n<summary>${title}</summary>\n\n${docMd(body?.content ?? []).replace(/\n+$/, "")}\n\n</details>\n`;
+    }
+    case "columns": {
+      const cols = (n.content ?? []).map((c) => {
+        const w = c.attrs?.width ? ` data-width="${c.attrs.width}"` : "";
+        const body = docMd(c.content ?? []).replace(/\n+$/, "");
+        return `<div class="ob-column"${w}>\n\n${body}\n\n</div>`;
+      });
+      return `<div class="ob-columns">\n\n${cols.join("\n\n")}\n\n</div>\n`;
     }
     case "codeBlock": {
       const code = (n.content ?? []).map((c) => c.text ?? "").join("");

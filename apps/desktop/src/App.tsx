@@ -22,12 +22,13 @@ import {
 } from "@phosphor-icons/react";
 import { api, dirOf, fileUrl, stem } from "./lib/api";
 import { isMac, setSidebar, useStore } from "./lib/store";
+import { appearanceOf, nextZoom } from "./lib/appearance";
 import { t } from "./lib/i18n";
 import { renderMd } from "./lib/render";
 import { Sidebar, SidebarPeek } from "./components/Sidebar";
 import { PageView, type SaveState } from "./components/PageView";
 import { AiPanel } from "./components/AiPanel";
-import { PreviewPanel, FloatingPreview } from "./components/Preview";
+import { PreviewPanel, FloatingPreview, FilePage } from "./components/Preview";
 import { HistoryPanel } from "./components/History";
 import { Home, TrashView, TagView, FolderView } from "./components/Views";
 import { Palette } from "./components/Palette";
@@ -73,7 +74,13 @@ export function App() {
       else if (key === "g") (e.preventDefault(), s.go({ kind: "graph" }));
       else if (key === "\\") (e.preventDefault(), setSidebar(!s.sidebar));
       else if (key === ",") (e.preventDefault(), useStore.setState({ settingsTab: "general" }));
-      else if (key === "[") (e.preventDefault(), s.goBack());
+      else if (!e.altKey && (key === "=" || key === "+" || key === "-" || key === "0")) {
+        // The window's zoom, kept in Settings → Appearance.
+        e.preventDefault();
+        const cur = appearanceOf(s.settings).zoom;
+        const z = key === "0" ? 1 : nextZoom(cur, key === "-" ? -1 : 1);
+        s.saveSettings({ appearance: { zoom: z } });
+      } else if (key === "[") (e.preventDefault(), s.goBack());
       else if (key === "]") (e.preventDefault(), s.goForward());
     };
     window.addEventListener("keydown", k);
@@ -111,6 +118,7 @@ export function App() {
           {r.kind === "home" && <Home />}
           {r.kind === "page" && <PageView key={r.path} path={r.path} onSaveState={onSaveState} />}
           {r.kind === "folder" && (st.databases.includes(r.path) ? <DatabaseView folder={r.path} /> : <FolderView path={r.path} />)}
+          {r.kind === "file" && <FilePage key={r.path} path={r.path} />}
           {r.kind === "graph" && <GraphView />}
           {r.kind === "trash" && <TrashView />}
           {r.kind === "tag" && <TagView tag={r.tag} />}
@@ -137,10 +145,16 @@ function TopBar({ save }: { save: { s: SaveState; at?: number } }) {
   const st = useStore();
   const r = st.route;
   const path = r.kind === "page" ? r.path : null;
-  const crumbs = path ? dirOf(path).split("/").filter(Boolean) : r.kind === "folder" ? r.path.split("/").filter(Boolean) : [];
+  const crumbs = path
+    ? dirOf(path).split("/").filter(Boolean)
+    : r.kind === "folder" || r.kind === "file"
+      ? (r.kind === "file" ? dirOf(r.path) : r.path).split("/").filter(Boolean)
+      : [];
   const title =
     r.kind === "page"
       ? stem(r.path)
+      : r.kind === "file"
+        ? r.path.split("/").pop()!
       : r.kind === "graph"
         ? t("Grafo")
         : r.kind === "trash"

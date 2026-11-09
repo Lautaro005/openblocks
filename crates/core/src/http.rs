@@ -4,6 +4,7 @@
 
 use std::convert::Infallible;
 use std::net::SocketAddr;
+use std::path::Path;
 use std::sync::Arc;
 
 use axum::body::Bytes;
@@ -21,7 +22,7 @@ use tokio_stream::wrappers::{BroadcastStream, UnboundedReceiverStream};
 use tokio_stream::StreamExt;
 
 use crate::vault::Vault;
-use crate::{ai, family, preview, search, settings, sys, util, AppState, Shared};
+use crate::{ai, artifact, family, preview, search, settings, sheet, sys, util, AppState, Shared};
 
 #[derive(rust_embed::RustEmbed)]
 #[folder = "../../apps/desktop/dist"]
@@ -69,6 +70,7 @@ struct PathQ {
     limit: Option<usize>,
     refresh: bool,
     download: bool,
+    theme: String,
 }
 
 // ---------- guard ----------
@@ -564,6 +566,192 @@ async fn preview_h(State(st): State<Shared>, Query(q): Query<PathQ>) -> R {
     Ok(Json(r))
 }
 
+// ---------- artifacts and spreadsheets ----------
+
+/// An HTML artifact as a page of its own, sandboxed, with its linked spreadsheets as data.
+async fn artifact_page(
+    State(st): State<Shared>,
+    Query(q): Query<PathQ>,
+    headers: HeaderMap,
+) -> Result<Response, ApiError> {
+    let v = vault(&st)?;
+    let abs = v.abs(&q.path)?;
+    let html = tokio::fs::read_to_string(&abs).await?;
+    let host = headers
+        .get(header::HOST)
+        .and_then(|h| h.to_str().ok())
+        .unwrap_or("127.0.0.1")
+        .to_string();
+    let rel = q.path.clone();
+    let theme = q.theme.clone();
+    let page = tokio::task::spawn_blocking(move || artifact::render(&v, &rel, &html, &theme))
+        .await
+        .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+    let mut r = page.into_response();
+    let h = r.headers_mut();
+    h.insert(
+        header::CONTENT_TYPE,
+        "text/html; charset=utf-8".parse().unwrap(),
+    );
+    h.insert(header::CACHE_CONTROL, "no-store".parse().unwrap());
+    h.insert(
+        header::CONTENT_SECURITY_POLICY,
+        artifact::csp(&host)
+            .parse()
+            .map_err(|_| anyhow::anyhow!("csp"))?,
+    );
+    Ok(r)
+}
+
+/// The spreadsheets an artifact uses, and where each one is in the vault.
+async fn artifact_info(State(st): State<Shared>, Query(q): Query<PathQ>) -> R {
+    let v = vault(&st)?;
+    let html = std::fs::read_to_string(v.abs(&q.path)?)?;
+    let sources: Vec<Value> = artifact::data_sources(&html)
+        .into_iter()
+        .map(|s| {
+            let path = artifact::resolve_source(&v, &q.path, &s);
+            json!({"name": s, "path": path})
+        })
+        .collect();
+    Ok(Json(json!({"sources": sources})))
+}
+
+/// Changes which spreadsheets an artifact uses (its `openblocks-data` meta tag).
+async fn artifact_data(
+    State(st): State<Shared>,
+    Query(q): Query<PathQ>,
+    Json(b): Json<Value>,
+) -> R {
+    let v = vault(&st)?;
+    let html = std::fs::read_to_string(v.abs(&q.path)?)?;
+    let sources: Vec<String> = b["sources"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|x| x.as_str().map(|s| s.trim().to_string()))
+        .filter(|s| !s.is_empty())
+        .collect();
+    let out = artifact::set_data_sources(&html, &sources);
+    v.snapshot(&q.path, &html, "edit");
+    v.write_raw(&q.path, &out)?;
+    let _ = st.events.send(crate::Event::Changed {
+        paths: vec![q.path.clone()],
+    });
+    Ok(Json(json!({"ok": true, "text": out})))
+}
+
+async fn sheet_get(State(st): State<Shared>, Query(q): Query<PathQ>) -> R {
+    let v = vault(&st)?;
+    let abs = v.abs(&q.path)?;
+    let r = tokio::task::spawn_blocking(move || sheet::read(&abs))
+        .await
+        .map_err(|e| anyhow::anyhow!(e.to_string()))??;
+    let mut r = r;
+    r["writable"] = json!(sheet::can_write(&v.abs(&q.path)?));
+    Ok(Json(r))
+}
+
+#[derive(Deserialize)]
+struct SheetBody {
+    sheets: Vec<sheet::SheetIn>,
+}
+
+async fn sheet_put(
+    State(st): State<Shared>,
+    Query(q): Query<PathQ>,
+    Json(b): Json<SheetBody>,
+) -> R {
+    let v = vault(&st)?;
+    let abs = v.abs(&q.path)?;
+    let bytes = sheet::encode(&abs, &b.sheets)?;
+    v.write_bytes(&q.path, &bytes)?;
+    let _ = st.events.send(crate::Event::Changed {
+        paths: vec![q.path.clone()],
+    });
+    Ok(Json(json!({"ok": true, "size": bytes.len()})))
+}
+
+/// Text files the app edits in place (an artifact's code). Pages go through /api/page.
+const TEXT_EXT: &[&str] = &[
+    "html", "htm", "css", "js", "mjs", "json", "txt", "svg", "csv", "tsv", "xml", "yaml", "yml",
+];
+
+async fn text_put(State(st): State<Shared>, Query(q): Query<PathQ>, Json(b): Json<Value>) -> R {
+    let v = vault(&st)?;
+    let ext = q
+        .path
+        .rsplit_once('.')
+        .map(|(_, e)| e.to_ascii_lowercase())
+        .unwrap_or_default();
+    if !TEXT_EXT.contains(&ext.as_str()) {
+        return Err(ApiError(
+            StatusCode::BAD_REQUEST,
+            "este tipo de archivo no se edita como texto".into(),
+        ));
+    }
+    let text = b["text"].as_str().unwrap_or("");
+    if let Ok(before) = std::fs::read_to_string(v.abs(&q.path)?) {
+        v.snapshot(&q.path, &before, "edit");
+    }
+    v.write_raw(&q.path, text)?;
+    v.reindex_one(&q.path);
+    let _ = st.events.send(crate::Event::Changed {
+        paths: vec![q.path.clone()],
+    });
+    Ok(Json(json!({"ok": true})))
+}
+
+/// New artifact (`kind: "html"`) or spreadsheet (`kind: "xlsx"`) in a folder.
+async fn file_create(State(st): State<Shared>, Json(b): Json<Value>) -> R {
+    let v = vault(&st)?;
+    let folder = b["folder"].as_str().unwrap_or("").trim().trim_matches('/');
+    let name = crate::vault::clean_name(b["name"].as_str().unwrap_or("").trim());
+    let kind = b["kind"].as_str().unwrap_or("html");
+    let sources: Vec<String> = b["sources"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|x| x.as_str().map(String::from))
+        .collect();
+    let rel = match kind {
+        "xlsx" => {
+            let base = if name.is_empty() {
+                "Planilla".to_string()
+            } else {
+                name
+            };
+            let rel = v.free_name(folder, &base, ".xlsx")?;
+            let sheets = vec![sheet::SheetIn {
+                name: "Hoja1".into(),
+                rows: vec![vec![json!("Nombre"), json!("Valor")]],
+                formulas: Default::default(),
+            }];
+            v.write_bytes(&rel, &sheet::encode(Path::new(&rel), &sheets)?)?;
+            rel
+        }
+        _ => {
+            let base = if name.is_empty() {
+                "Artefacto".to_string()
+            } else {
+                name
+            };
+            let rel = v.free_name(folder, &base, ".html")?;
+            v.write_raw(&rel, &artifact::template(&base, &sources))?;
+            v.reindex_one(&rel);
+            rel
+        }
+    };
+    let _ = st.events.send(crate::Event::Tree);
+    Ok(Json(json!({"path": rel})))
+}
+
+/// The window's zoom (Settings → Appearance, ⌘+ / ⌘-).
+async fn zoom_h(Json(b): Json<Value>) -> R {
+    let f = b["factor"].as_f64().unwrap_or(1.0);
+    Ok(Json(json!({"native": crate::zoom(f)})))
+}
+
 async fn open_h(State(st): State<Shared>, Json(b): Json<Value>) -> R {
     if let Some(url) = b["url"].as_str() {
         sys::open_url(url)?;
@@ -704,6 +892,11 @@ async fn ai_undo(State(st): State<Shared>, Json(b): Json<Value>) -> R {
             v.move_entry(path, from)?;
         }
         "delete" => {
+            v.restore_trash(b["trash"].as_str().unwrap_or(""))?;
+        }
+        // A file the agent wrote over: the new one goes to the trash, the old one comes back.
+        "replace" => {
+            v.trash(path)?;
             v.restore_trash(b["trash"].as_str().unwrap_or(""))?;
         }
         _ => {
@@ -1016,6 +1209,13 @@ pub fn router(st: Shared, port: u16) -> Router {
         .route("/api/upload", post(upload))
         .route("/api/file", get(file))
         .route("/api/preview", get(preview_h))
+        .route("/api/artifact", get(artifact_page))
+        .route("/api/artifact/info", get(artifact_info))
+        .route("/api/artifact/data", put(artifact_data))
+        .route("/api/sheet", get(sheet_get).put(sheet_put))
+        .route("/api/text", put(text_put))
+        .route("/api/file/create", post(file_create))
+        .route("/api/zoom", post(zoom_h))
         .route("/api/open", post(open_h))
         .route("/api/daily", post(daily))
         .route("/api/templates", get(templates))

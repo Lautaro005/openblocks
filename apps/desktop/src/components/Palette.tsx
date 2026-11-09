@@ -14,6 +14,8 @@ import {
   House,
   SidebarSimple,
   ArrowRight,
+  FileHtml,
+  Table,
 } from "@phosphor-icons/react";
 import { api, dirOf, type Hit } from "../lib/api";
 import { mod, setSidebar, useStore } from "../lib/store";
@@ -55,6 +57,8 @@ export function Palette() {
         await st.refreshTree();
         useStore.setState({ renaming: r.path });
       } },
+      { id: "artifact", title: t("Nuevo artefacto HTML"), icon: FileHtml, run: () => st.newFile("", "html") },
+      { id: "sheet", title: t("Nueva planilla"), icon: Table, run: () => st.newFile("", "xlsx") },
       { id: "home", title: t("Ir al inicio"), icon: House, run: () => st.go({ kind: "home" }) },
       { id: "graph", title: t("Abrir el grafo"), icon: Graph, kbd: `${mod}G`, run: () => st.go({ kind: "graph" }) },
       { id: "trash", title: t("Papelera"), icon: Trash, run: () => st.go({ kind: "trash" }) },

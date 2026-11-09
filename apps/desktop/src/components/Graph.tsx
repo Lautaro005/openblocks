@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { MagnifyingGlass, Crosshair, ArrowsOut } from "@phosphor-icons/react";
+import { MagnifyingGlass, Crosshair, ArrowsOut, Plus, Minus } from "@phosphor-icons/react";
 import { api } from "../lib/api";
 import { useStore } from "../lib/store";
 import { t } from "../lib/i18n";
@@ -26,6 +26,18 @@ export function GraphView() {
   });
   const qRef = useRef(q);
   qRef.current = q;
+  const [zoom, setZoom] = useState(1);
+
+  /** Zooms by `f` keeping the point (x, y), relative to the canvas center, still. */
+  const zoomAt = (f: number, x = 0, y = 0) => {
+    const cam = state.current.cam;
+    const k = Math.max(0.1, Math.min(5, cam.k * f));
+    const g = k / cam.k;
+    cam.x = x - (x - cam.x) * g;
+    cam.y = y - (y - cam.y) * g;
+    cam.k = k;
+    setZoom(k);
+  };
 
   useEffect(() => {
     api.graph().then((g) => {
@@ -217,10 +229,22 @@ export function GraphView() {
       s.drag = null;
       pan = null;
     };
+    // The wheel and pinch (ctrl + wheel) zoom toward the pointer in proportion to how far they
+    // moved, so a trackpad's many small steps and a mouse's few big ones feel the same. Sideways
+    // scrolling pans.
     const wheel = (e: WheelEvent) => {
       e.preventDefault();
       const s = state.current;
-      s.cam.k = Math.max(0.15, Math.min(4, s.cam.k * (e.deltaY < 0 ? 1.1 : 0.9)));
+      const r = c.getBoundingClientRect();
+      const px = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? r.height : 1;
+      const dy = e.deltaY * px;
+      const dx = e.deltaX * px;
+      if (!e.ctrlKey && Math.abs(dx) > Math.abs(dy)) {
+        s.cam.x -= dx;
+        return;
+      }
+      const speed = e.ctrlKey ? 0.008 : 0.0012;
+      zoomAt(Math.exp(-Math.max(-120, Math.min(120, dy)) * speed), e.clientX - r.left - r.width / 2, e.clientY - r.top - r.height / 2);
     };
     c.addEventListener("mousedown", down);
     window.addEventListener("mousemove", move);
@@ -251,7 +275,25 @@ export function GraphView() {
         <button className={`pill ${ghosts ? "on" : ""}`} onClick={() => setGhosts(!ghosts)}>
           {t("Mostrar enlaces sin página")}
         </button>
-        <button className="btn-icon" title={t("Centrar")} onClick={() => (state.current.cam = { x: 0, y: 0, k: 1 })}>
+        <div className="zoom-ctl">
+          <button className="btn-icon sm" title={t("Alejar")} onClick={() => zoomAt(1 / 1.25)}>
+            <Minus size={14} />
+          </button>
+          <button className="zoom-val" title={t("Volver al 100%")} onClick={() => zoomAt(1 / state.current.cam.k)}>
+            {Math.round(zoom * 100)}%
+          </button>
+          <button className="btn-icon sm" title={t("Acercar")} onClick={() => zoomAt(1.25)}>
+            <Plus size={14} />
+          </button>
+        </div>
+        <button
+          className="btn-icon"
+          title={t("Centrar")}
+          onClick={() => {
+            state.current.cam = { x: 0, y: 0, k: 1 };
+            setZoom(1);
+          }}
+        >
           <ArrowsOut size={16} />
         </button>
         <span className="muted xs push-left">{t("{n} páginas · {e} enlaces", { n: stats.n, e: stats.e })}</span>

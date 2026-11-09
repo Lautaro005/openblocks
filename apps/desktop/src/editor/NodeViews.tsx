@@ -13,7 +13,8 @@ import {
   CornersOut,
   ArrowRight,
 } from "@phosphor-icons/react";
-import { api, baseName, dirOf, fileUrl, isAudio, isImage, isVideo, stem } from "../lib/api";
+import { api, baseName, dirOf, fileUrl, isAudio, isHtml, isImage, isVideo, stem } from "../lib/api";
+import { ArtifactFrame } from "../components/ArtifactView";
 import { useStore } from "../lib/store";
 import { renderMd } from "../lib/render";
 import { t } from "../lib/i18n";
@@ -45,7 +46,7 @@ function currentFolder() {
   return r.kind === "page" ? dirOf(r.path) : "";
 }
 
-export function EmbedView({ node, selected }: NodeViewProps) {
+export function EmbedView({ node, selected, updateAttributes }: NodeViewProps) {
   const src: string = node.attrs.src;
   const external = /^https?:\/\//i.test(src);
   const [path, setPath] = useState<string | null | undefined>(external ? src : undefined);
@@ -91,6 +92,8 @@ export function EmbedView({ node, selected }: NodeViewProps) {
     );
   else if (isVideo(path)) body = <video className="embed-media" src={url} controls preload="metadata" />;
   else if (isAudio(path)) body = <audio className="embed-audio" src={url} controls preload="metadata" />;
+  else if (isHtml(path) && !external)
+    body = <EmbeddedArtifact path={path} height={Number(node.attrs.alt) || 420} onHeight={(h) => updateAttributes({ alt: String(h) })} />;
   else if (isPage)
     body = (
       <div className="embed-page" contentEditable={false}>
@@ -211,5 +214,47 @@ export function CalloutView({ node, updateAttributes, editor }: NodeViewProps) {
       </div>
       <NodeViewContent className="callout-body" />
     </NodeViewWrapper>
+  );
+}
+
+/** An HTML artifact inside a page; drag the bottom edge to change its height (kept as ![[x.html|420]]). */
+function EmbeddedArtifact({ path, height, onHeight }: { path: string; height: number; onHeight: (h: number) => void }) {
+  const [h, setH] = useState(height);
+  useEffect(() => setH(height), [height]);
+  const drag = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const y0 = e.clientY;
+    const h0 = h;
+    let last = h0;
+    document.body.classList.add("resizing-row");
+    const mv = (ev: MouseEvent) => {
+      last = Math.round(Math.max(120, Math.min(2000, h0 + ev.clientY - y0)));
+      setH(last);
+    };
+    const up = () => {
+      window.removeEventListener("mousemove", mv);
+      window.removeEventListener("mouseup", up);
+      document.body.classList.remove("resizing-row");
+      if (last !== h0) onHeight(last);
+    };
+    window.addEventListener("mousemove", mv);
+    window.addEventListener("mouseup", up);
+  };
+  return (
+    <div className="embed-artifact" contentEditable={false}>
+      <div className="embed-artifact-head">
+        <FileIcon path={path} size={15} />
+        <b>{stem(path)}</b>
+        <span className="push" />
+        <button className="btn-icon sm" title={t("Ver el código o los datos")} onClick={() => useStore.getState().setPanel({ kind: "preview", path })}>
+          <ArrowSquareOut size={14} />
+        </button>
+        <button className="btn-icon sm" title={t("Abrir en grande")} onClick={() => useStore.getState().go({ kind: "file", path })}>
+          <CornersOut size={14} />
+        </button>
+      </div>
+      <ArtifactFrame path={path} height={h} />
+      <div className="embed-artifact-resize" onMouseDown={drag} title={t("Arrastrá para cambiar el alto")} />
+    </div>
   );
 }

@@ -1,7 +1,7 @@
 {
   "name": "openblocks-desktop",
   "private": true,
-  "version": "0.1.2",
+  "version": "0.1.3",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -25,6 +25,7 @@
     "@tiptap/suggestion": "3.32.2",
     "lowlight": "3.3.0",
     "marked": "18.1.2",
+    "pdfjs-dist": "6.4.299",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "zustand": "5.0.16"

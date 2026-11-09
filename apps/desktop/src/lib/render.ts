@@ -36,7 +36,7 @@ m.use({
   ],
   renderer: {
     html(tk: any) {
-      return esc(tk.text ?? tk.raw ?? "");
+      return safeHtml(tk.text ?? tk.raw ?? "");
     },
     link(tk: any) {
       const href = String(tk.href ?? "");
@@ -61,6 +61,31 @@ m.use({
     },
   },
 });
+
+// The few tags pages use for blocks Markdown has no syntax for (toggles, columns) are kept, without
+// any other attribute; everything else is shown as text.
+const KEEP = /<details\b([^>]*)>|<\/details\s*>|<summary>|<\/summary\s*>|<div\b([^>]*)>|<\/div\s*>/gi;
+
+function safeHtml(raw: string): string {
+  let o = "";
+  let last = 0;
+  KEEP.lastIndex = 0;
+  let r: RegExpExecArray | null;
+  while ((r = KEEP.exec(raw))) {
+    o += esc(raw.slice(last, r.index));
+    last = r.index + r[0].length;
+    const tag = r[0].toLowerCase();
+    if (tag.startsWith("<details")) {
+      const h = /data-heading="?(\d)/.exec(r[1] ?? "")?.[1];
+      o += `<details class="toggle"${h ? ` data-heading="${h}"` : ""}>`;
+    } else if (tag.startsWith("<div")) {
+      const cls = /class="(ob-columns|ob-column)"/.exec(r[2] ?? "")?.[1];
+      const w = /data-width="([\d.]+)"/.exec(r[2] ?? "")?.[1];
+      o += cls ? `<div class="${cls}"${cls === "ob-column" && w ? ` style="flex-grow:${w}"` : ""}>` : "<div>";
+    } else o += tag.replace(/\s+/g, "");
+  }
+  return o + esc(raw.slice(last));
+}
 
 export function renderMd(md: string): string {
   return m.parse(md ?? "", { async: false }) as string;

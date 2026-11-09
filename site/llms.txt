@@ -10,8 +10,11 @@
 - Local server: `http://127.0.0.1:47880` (loopback only; `X-OpenBlocks: 1` header required for writes)
 - Data: pages in the vault; history, trash and chats in `<vault>/.openblocks/`; settings in `~/.openblocks/settings.json`
 - Markdown: `[[wikilinks]]`, `![[embeds]]`, `> [!note]` callouts, `- [ ]` tasks, `==highlights==`, `#tags`, YAML frontmatter properties, `<details>` toggles
-- MCP tools: search_pages, read_page, list_pages, backlinks, create_page, edit_page, set_property (+ web_search, web_fetch, brain_search, lumina_search with `--with`)
-- Editor: ⌘F / Ctrl+F find and replace (case, whole word, regex); drag a rectangle from the margin to select blocks
+- MCP tools: search_pages, read_page, list_pages, backlinks, create_page, edit_page, set_property, write_artifact, write_spreadsheet (+ web_search, web_fetch, brain_search, lumina_search with `--with`)
+- Editor: ⌘F / Ctrl+F find and replace (case, whole word, regex); drag a rectangle from the margin to select blocks; up to 4 columns (`<div class="ob-columns">` + `<div class="ob-column">`), toggle headings (`<details data-heading="2">`), headings 1-4
+- HTML artifacts: `.html` files shown running in the app (View/Code toggle), sandboxed (no network except jsDelivr/cdnjs/unpkg/esm.sh CDNs); spreadsheets linked with `<meta name="openblocks-data" content="file.xlsx">` are read with `openblocks.table()`, `openblocks.rows()`, `openblocks.sheets()`; embed with `![[file.html|height]]`
+- Spreadsheets: .xlsx/.csv/.tsv editor with formulas (SUM/SUMA, AVERAGE/PROMEDIO, IF/SI…); PDFs in a built-in pdf.js viewer
+- Appearance: Settings → Appearance (theme, palette, accent, fonts, text size, line spacing, page width, interface zoom)
 - Sidebar: resizable, floats over the page when hidden; folders open by name and sort by name, date, type or by hand
 - Import from Notion: Settings → Import (integration token or the `.zip` export) into a new vault folder
 - No accounts, no telemetry, no servers of its own
