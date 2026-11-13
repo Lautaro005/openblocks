@@ -524,11 +524,20 @@ mod tests {
 <w:p><w:r><w:t>Tres</w:t></w:r></w:p>
 </w:body></w:document>"#;
         let mut z = zip::ZipWriter::new(std::fs::File::create(&p).unwrap());
-        z.start_file("word/document.xml", zip::write::SimpleFileOptions::default()).unwrap();
+        z.start_file(
+            "word/document.xml",
+            zip::write::SimpleFileOptions::default(),
+        )
+        .unwrap();
         z.write_all(body.as_bytes()).unwrap();
         z.finish().unwrap();
         let v = super::preview(&p).unwrap();
-        let kinds: Vec<&str> = v["blocks"].as_array().unwrap().iter().map(|b| b["kind"].as_str().unwrap()).collect();
+        let kinds: Vec<&str> = v["blocks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|b| b["kind"].as_str().unwrap())
+            .collect();
         assert_eq!(kinds, ["h1", "p", "page", "p", "p", "page", "p"]);
         assert_eq!(v["blocks"][1]["text"], "Texto ");
     }
