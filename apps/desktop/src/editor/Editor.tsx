@@ -6,7 +6,6 @@ import { Table, TableRow, TableHeader, TableCell } from "@tiptap/extension-table
 import { DetailsSummary, DetailsContent } from "@tiptap/extension-details";
 import Highlight from "@tiptap/extension-highlight";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
-import { Placeholder } from "@tiptap/extensions";
 import { NodeSelection, TextSelection } from "@tiptap/pm/state";
 import { DOMSerializer } from "@tiptap/pm/model";
 import { createLowlight } from "lowlight";
@@ -78,7 +77,7 @@ import { isMac, useStore } from "../lib/store";
 import { FindReplace, findState } from "./find";
 import { BlockSelection, attachMarquee } from "./marquee";
 import { FindBar } from "./FindBar";
-import { Callout, Embed, Shortcuts, SlashCommand, TagHighlight, ToggleDetails, WikiLink, WikiSuggest, setToggleHeading, usePopup, type SuggestItem } from "./extensions";
+import { Callout, CursorPlaceholder, Embed, Shortcuts, SlashCommand, TagHighlight, ToggleDetails, WikiLink, WikiSuggest, setToggleHeading, usePopup, type SuggestItem } from "./extensions";
 import { Column, Columns, MAX_COLUMNS, dropBeside, insertColumns } from "./columns";
 import { slashItems } from "./slash";
 import { matchCombo, showCombo } from "../lib/keys";
@@ -209,8 +208,7 @@ export const Editor = forwardRef<EditorHandle, Props>(function Editor({ page, on
           }
         },
       }),
-      Placeholder.configure({
-        includeChildren: true,
+      CursorPlaceholder.configure({
         placeholder: ({ node, editor, pos }) => {
           if (node.type.name === "heading") return t("Título");
           if (node.type.name === "detailsSummary") return t("Desplegable");
@@ -229,6 +227,17 @@ export const Editor = forwardRef<EditorHandle, Props>(function Editor({ page, on
         items: slashItems({
           attach: () => fileInput.current?.click(),
           linkPage: (e) => e.chain().focus().insertContent("[[").run(),
+          newPage: async (e) => {
+            const st = useStore.getState();
+            const r = await api.createPage(dirOf(pageRef.current.path), t("Sin título")).catch((err) => (st.toast(err.message, "error"), null));
+            if (!r) return;
+            await st.refreshTree();
+            const link = st.linkTo(r.path).slice(2, -2).split("|")[0];
+            e.chain().focus().insertContent([{ type: "wikilink", attrs: { target: link } }, { type: "text", text: " " }]).run();
+            // The link is saved when this page closes; the new page opens with its title ready to type.
+            st.go({ kind: "page", path: r.path });
+            useStore.setState({ renaming: r.path });
+          },
           ai: (e) => {
             const sel = sliceMd(e);
             useStore.getState().askAI(sel ? `> ${sel.split("\n").join("\n> ")}\n\n` : "");
@@ -246,7 +255,7 @@ export const Editor = forwardRef<EditorHandle, Props>(function Editor({ page, on
       }),
       WikiSuggest.configure({
         items: async (query: string) => {
-          const hits = await api.titles(query, 8).catch(() => []);
+          const hits = await api.titles(query, 14).catch(() => []);
           const items: SuggestItem[] = hits.map((h) => ({
             id: h.path,
             title: h.title,
@@ -857,7 +866,7 @@ function SuggestPopup() {
   if (!p.open) return null;
   let lastGroup = "";
   return (
-    <div className={`suggest ${p.kind}`} ref={box} style={{ top: pos.top, left: pos.left }} onMouseDown={(e) => e.preventDefault()}>
+    <div className={`suggest suggest-${p.kind}`} ref={box} style={{ top: pos.top, left: pos.left }} onMouseDown={(e) => e.preventDefault()}>
       {!p.items.length && <div className="suggest-empty">{p.kind === "link" ? t("Escribí el nombre de una página") : t("Nada coincide")}</div>}
       {p.items.map((it, i) => {
         const I = ICONS[it.icon ?? "text"] ?? TextT;
@@ -875,7 +884,7 @@ function SuggestPopup() {
                 <I size={16} weight={it.icon === "ai" ? "fill" : "regular"} />
               </span>
               <span className="suggest-title">{it.title}</span>
-              {it.hint && <span className="suggest-hint">{it.hint}</span>}
+              {it.hint && <span className="suggest-hint" title={it.hint}>{it.hint}</span>}
             </button>
           </div>
         );
@@ -1048,11 +1057,12 @@ function BlockHandle({ editor, wrap, onAsk }: { editor: TEditor; wrap: React.Ref
     return () => dom.removeEventListener("drop", onDrop, true);
   }, [editor]);
 
-  const insertBelow = () => {
+  /** A new block under this one, or above it with Shift (or ⌥/Alt, as in Notion). */
+  const insertBelow = (e: React.MouseEvent) => {
     const pos = blockPos();
     if (pos == null) return;
     const node = editor.state.doc.nodeAt(pos);
-    const at = pos + (node?.nodeSize ?? 0);
+    const at = e.shiftKey || e.altKey ? pos : pos + (node?.nodeSize ?? 0);
     editor.chain().insertContentAt(at, { type: "paragraph", content: [{ type: "text", text: "/" }] }).run();
     editor.commands.setTextSelection(at + 2);
     editor.commands.focus();
@@ -1107,7 +1117,7 @@ function BlockHandle({ editor, wrap, onAsk }: { editor: TEditor; wrap: React.Ref
           onMouseEnter={() => window.clearTimeout(hideT.current)}
         >
           {!block.nested && (
-            <button className="handle-btn" onClick={insertBelow} title={t("Insertar un bloque debajo")}>
+            <button className="handle-btn" onClick={insertBelow} title={t("Insertar un bloque debajo · con Shift, arriba")}>
               <Plus size={15} />
             </button>
           )}

@@ -78,10 +78,13 @@ reproduce and the impact you expect. Remove API keys, page contents and personal
   reaches the page only because the app reads the files the artifact names in its `openblocks-data` meta tag and writes
   them into the page before serving it. Every other `.html` in the vault is still served as plain text. An artifact you
   did not write is code from someone else: open its Code view first if you are unsure.
+  A folder set to open on an HTML page (`html` in its view settings) shows that file through the same sandboxed
+  artifact frame, never in the app's own window.
 - **Spreadsheets** are read and written in Rust (calamine, rust_xlsxwriter) inside the vault; formulas are evaluated by
   the app's own small engine in the page, never with `eval`.
 - **PDFs** are drawn by pdf.js inside the app (the PDF's own JavaScript and forms are not run); its worker, character
   maps and fonts are bundled with the app, so nothing is downloaded.
+- **Tabs and panel sizes** are kept in the app's local storage only (page paths and widths), never sent anywhere.
 - **Symbolic links.** A symlink inside your vault is followed like any file. Do not put links to folders you would not
   want an agent to read inside a vault.
 

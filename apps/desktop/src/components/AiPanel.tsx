@@ -32,6 +32,7 @@ import { useStore } from "../lib/store";
 import { t, timeAgo } from "../lib/i18n";
 import { renderMd } from "../lib/render";
 import { Brand } from "./Brand";
+import { PanelResizer, panelStyle } from "./Preview";
 
 type Msg = {
   role: "user" | "assistant";
@@ -278,6 +279,7 @@ export function AiPanel() {
   return (
     <aside
       className={`ai-panel ${dragging ? "dropping" : ""}`}
+      style={panelStyle("ai")}
       onDragOver={(e) => {
         if (e.dataTransfer.types.includes("Files")) {
           e.preventDefault();
@@ -296,6 +298,7 @@ export function AiPanel() {
         }
       }}
     >
+      <PanelResizer kind="ai" />
       <header className="panel-head">
         <Sparkle size={16} weight="fill" className="ai-mark" />
         <span className="panel-title">{history ? t("Conversaciones") : t("Asistente")}</span>

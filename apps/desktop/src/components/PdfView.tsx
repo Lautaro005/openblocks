@@ -40,16 +40,24 @@ export function PdfView({ url }: { url: string }) {
     let live = true;
     task.promise
       .then(async (d) => {
-        // Page sizes first, so the scroll height is right before any page is drawn.
-        const s: { w: number; h: number }[] = [];
-        for (let i = 1; i <= d.numPages; i++) {
-          const p = await d.getPage(i);
-          const v = p.getViewport({ scale: 1 });
-          s.push({ w: v.width, h: v.height });
-        }
+        // The first page's size stands for all of them so the document shows at once; the real
+        // sizes come in after, all together (asking for every page before showing any left big
+        // PDFs blank for a long time).
+        const first = (await d.getPage(1)).getViewport({ scale: 1 });
         if (!live) return;
-        setSizes(s);
+        setSizes(Array.from({ length: d.numPages }, () => ({ w: first.width, h: first.height })));
         setDoc(d);
+        if (d.numPages > 1) {
+          const all = await Promise.all(
+            Array.from({ length: d.numPages }, (_, i) =>
+              d.getPage(i + 1).then((p) => {
+                const v = p.getViewport({ scale: 1 });
+                return { w: v.width, h: v.height };
+              }),
+            ),
+          ).catch(() => null);
+          if (live && all && all.some((x) => Math.abs(x.w - first.width) > 0.5 || Math.abs(x.h - first.height) > 0.5)) setSizes(all);
+        }
       })
       .catch((e) => live && setErr(e?.message || String(e)));
     return () => {
@@ -63,7 +71,11 @@ export function PdfView({ url }: { url: string }) {
     const el = box.current;
     if (!el || !sizes.length) return;
     const widest = Math.max(...sizes.map((s) => s.w));
-    const fit = () => setFitScale(Math.max(0.2, (el.clientWidth - 40) / widest));
+    // Small changes are ignored: a scroll bar that comes and goes would make the pages shake.
+    const fit = () => {
+      const next = Math.max(0.2, (el.clientWidth - 40) / widest);
+      setFitScale((cur) => (Math.abs(cur - next) / cur > 0.015 ? next : cur));
+    };
     fit();
     const ro = new ResizeObserver(fit);
     ro.observe(el);
@@ -178,7 +190,7 @@ export function PdfView({ url }: { url: string }) {
 
 function PdfPage({ doc, n, width, height, scale, root }: { doc: Doc; n: number; width: number; height: number; scale: number; root: React.RefObject<HTMLDivElement | null> }) {
   const wrap = useRef<HTMLDivElement>(null);
-  const canvas = useRef<HTMLCanvasElement>(null);
+  const holder = useRef<HTMLDivElement>(null);
   const text = useRef<HTMLDivElement>(null);
   const [near, setNear] = useState(false);
 
@@ -186,10 +198,20 @@ function PdfPage({ doc, n, width, height, scale, root }: { doc: Doc; n: number; 
   useEffect(() => {
     const el = wrap.current;
     if (!el) return;
-    const io = new IntersectionObserver(([e]) => setNear(e.isIntersecting), { root: root.current, rootMargin: "800px 0px" });
+    const io = new IntersectionObserver(([e]) => setNear(e.isIntersecting), { root: root.current, rootMargin: "1000px 0px" });
     io.observe(el);
     return () => io.disconnect();
   }, [root]);
+
+  // Pages far away let go of their drawing, so long PDFs don't fill the memory.
+  useEffect(() => {
+    if (near) return;
+    const t = window.setTimeout(() => {
+      holder.current?.replaceChildren();
+      text.current?.replaceChildren();
+    }, 1500);
+    return () => window.clearTimeout(t);
+  }, [near]);
 
   useEffect(() => {
     if (!near) return;
@@ -198,26 +220,36 @@ function PdfPage({ doc, n, width, height, scale, root }: { doc: Doc; n: number; 
     let layer: { cancel: () => void } | null = null;
     // A short wait so zooming with the wheel doesn't draw every step.
     const timer = window.setTimeout(async () => {
-      const p = await doc.getPage(n);
-      if (cancelled || !canvas.current || !text.current) return;
-      const vp = p.getViewport({ scale });
-      const ratio = Math.min(3, window.devicePixelRatio || 1);
-      const c = canvas.current;
-      c.width = Math.floor(vp.width * ratio);
-      c.height = Math.floor(vp.height * ratio);
-      const r = p.render({ canvas: c, viewport: vp, transform: ratio !== 1 ? [ratio, 0, 0, ratio, 0, 0] : undefined });
-      task = r;
-      await r.promise.catch(() => {});
-      if (cancelled) return;
-      const tl = text.current;
-      tl.replaceChildren();
-      tl.style.setProperty("--scale-factor", String(scale));
-      tl.style.setProperty("--total-scale-factor", String(scale));
-      const content = await p.getTextContent();
-      if (cancelled) return;
-      const l = new pdfjs.TextLayer({ textContentSource: content, container: tl, viewport: vp });
-      layer = l;
-      await l.render().catch(() => {});
+      try {
+        const p = await doc.getPage(n);
+        if (cancelled || !holder.current || !text.current) return;
+        const vp = p.getViewport({ scale });
+        const ratio = Math.min(3, window.devicePixelRatio || 1);
+        // Each drawing gets its own canvas, swapped in when it's done: drawing again on a canvas
+        // that is still being drawn makes pdf.js give up and leaves the page blank, and the old
+        // drawing stays (stretched) while zooming instead of flashing white.
+        const c = document.createElement("canvas");
+        c.width = Math.floor(vp.width * ratio);
+        c.height = Math.floor(vp.height * ratio);
+        const r = p.render({ canvas: c, viewport: vp, transform: ratio !== 1 ? [ratio, 0, 0, ratio, 0, 0] : undefined });
+        task = r;
+        await r.promise;
+        if (cancelled || !holder.current) return;
+        holder.current.replaceChildren(c);
+        const content = await p.getTextContent();
+        if (cancelled || !text.current) return;
+        const tl = document.createElement("div");
+        tl.className = "pdf-text textLayer";
+        tl.style.setProperty("--scale-factor", String(scale));
+        tl.style.setProperty("--total-scale-factor", String(scale));
+        const l = new pdfjs.TextLayer({ textContentSource: content, container: tl, viewport: vp });
+        layer = l;
+        await l.render();
+        if (cancelled || !text.current) return;
+        text.current.replaceChildren(tl);
+      } catch {
+        // Cancelled by a newer drawing, or a broken page: the next try draws it.
+      }
     }, 60);
     return () => {
       cancelled = true;
@@ -229,8 +261,8 @@ function PdfPage({ doc, n, width, height, scale, root }: { doc: Doc; n: number; 
 
   return (
     <div className="pdf-page" ref={wrap} style={{ width, height }}>
-      <canvas ref={canvas} style={{ width, height }} />
-      <div className="pdf-text textLayer" ref={text} />
+      <div className="pdf-canvas" ref={holder} />
+      <div className="pdf-text-wrap" ref={text} />
     </div>
   );
 }

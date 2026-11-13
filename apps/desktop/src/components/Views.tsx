@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
-import { Plus, CalendarDots, Sparkle, Graph, ArrowCounterClockwise, Trash, FileText, Hash, Folder, MagnifyingGlass, Table, SortAscending, SortDescending, ListBullets, SquaresFour } from "@phosphor-icons/react";
-import { api, stem } from "../lib/api";
+import { lazy, Suspense, useEffect, useState } from "react";
+import { Plus, CalendarDots, Sparkle, Graph, ArrowCounterClockwise, Trash, FileText, Hash, Folder, MagnifyingGlass, Table, SortAscending, SortDescending, ListBullets, SquaresFour, FileHtml, PencilSimple, X } from "@phosphor-icons/react";
+import { api, stem, type TreeNode } from "../lib/api";
+import { openMenuAt, type MenuItem } from "./Menu";
+const ArtifactFrame = lazy(() => import("./ArtifactView").then((m) => ({ default: m.ArtifactFrame })));
 import { mod, useStore } from "../lib/store";
 import { t, timeAgo, getLang } from "../lib/i18n";
 import { FileIcon } from "./FileIcon";
@@ -168,7 +170,26 @@ export function TagView({ tag }: { tag: string }) {
 
 /** A folder that is not a database: its pages and files as a list, with a button to turn it into one. */
 type FolderItem = { path: string; name: string; kind: "folder" | "page" | "file"; mtime: number; size: number; count: number };
-type FolderViewCfg = { layout?: "list" | "grid"; sort?: "name" | "mtime" | "kind" | "manual"; dir?: 1 | -1; order?: string[] };
+type FolderViewCfg = {
+  layout?: "list" | "grid";
+  sort?: "name" | "mtime" | "kind" | "manual";
+  dir?: 1 | -1;
+  order?: string[];
+  /** An HTML page the folder shows instead of only its files. */
+  html?: string;
+};
+
+function htmlFiles(tree: TreeNode[], folder: string): string[] {
+  const out: string[] = [];
+  const walk = (ns: TreeNode[]) => {
+    for (const n of ns) {
+      if (n.kind === "file" && /\.html?$/i.test(n.path) && (!folder || n.path.startsWith(folder + "/"))) out.push(n.path);
+      if (n.children) walk(n.children);
+    }
+  };
+  walk(tree);
+  return out.sort();
+}
 
 const KIND_RANK = { folder: 0, page: 1, file: 2 } as const;
 
@@ -202,6 +223,33 @@ export function FolderView({ path }: { path: string }) {
     api.folderView(path, v).catch((e) => st.toast(e.message, "error"));
   };
   const items = data ? sortItems(data.items, view) : [];
+  const html = view.html && st.names.has(view.html.toLowerCase()) ? view.html : null;
+  const [tab, setTab] = useState<"page" | "files">("page");
+  useEffect(() => setTab("page"), [path]);
+  const showHtml = !!html && tab === "page";
+  const pickHtml = (el: HTMLElement) => {
+    const files = htmlFiles(st.tree, path);
+    const items: MenuItem[] = [{ title: t("Página HTML de la carpeta") }];
+    for (const f of files.slice(0, 30))
+      items.push({ label: f.slice(path.length + 1), icon: FileHtml, run: () => (save({ ...view, html: f }), setTab("page")) });
+    if (!files.length) items.push({ label: t("No hay archivos HTML en esta carpeta"), disabled: true, run: () => {} });
+    items.push({ sep: true }, {
+      label: t("Nuevo artefacto HTML"),
+      icon: Plus,
+      run: async () => {
+        try {
+          const r = await api.createFile(path, stem(path), "html");
+          save({ ...view, html: r.path });
+          await st.refreshTree();
+          setTab("page");
+        } catch (e: any) {
+          st.toast(e.message, "error");
+        }
+      },
+    });
+    if (html) items.push({ label: t("Quitar la página HTML"), icon: X, danger: true, run: () => save({ ...view, html: undefined }) });
+    openMenuAt(el, items);
+  };
   const layout = view.layout ?? "list";
   const sort = view.sort ?? "name";
   const dropOnItem = (target: string) => {
@@ -215,9 +263,29 @@ export function FolderView({ path }: { path: string }) {
   const meta = (n: FolderItem) =>
     n.kind === "folder" ? t(n.count === 1 ? "{n} elemento" : "{n} elementos", { n: n.count }) : timeAgo(n.mtime);
   return (
-    <div className="plain-view folder-view">
+    <div className={`plain-view folder-view ${showHtml ? "with-html" : ""}`}>
       <h1>{stem(path)}</h1>
       <div className="row-gap folder-bar">
+        {html && (
+          <div className="seg">
+            <button className={tab === "page" ? "on" : ""} onClick={() => setTab("page")}>
+              <FileHtml size={15} /> {t("Página")}
+            </button>
+            <button className={tab === "files" ? "on" : ""} onClick={() => setTab("files")}>
+              <Folder size={15} /> {t("Archivos")}
+            </button>
+          </div>
+        )}
+        <button className="btn sm" title={t("Elegí un archivo HTML para que la carpeta lo muestre")} onClick={(e) => pickHtml(e.currentTarget)}>
+          <FileHtml size={14} /> {html ? t("Cambiar página HTML") : t("Página HTML")}
+        </button>
+        {showHtml && (
+          <button className="btn sm" onClick={() => st.go({ kind: "file", path: html! })}>
+            <PencilSimple size={14} /> {t("Editar")}
+          </button>
+        )}
+        {showHtml && <div className="push" />}
+        {!showHtml && <>
         <button className="btn sm" onClick={() => st.newPage(path)}>
           <Plus size={14} /> {t("Nueva página")}
         </button>
@@ -257,9 +325,17 @@ export function FolderView({ path }: { path: string }) {
             <SquaresFour size={15} />
           </button>
         </div>
+        </>}
       </div>
-      {sort === "manual" && <p className="muted xs">{t("Arrastrá los elementos para ordenarlos.")}</p>}
-      <div className={layout === "grid" ? "folder-grid" : "list"}>
+      {showHtml && (
+        <div className="folder-html">
+          <Suspense fallback={<div className="pv-loading" />}>
+            <ArtifactFrame path={html!} />
+          </Suspense>
+        </div>
+      )}
+      {!showHtml && sort === "manual" && <p className="muted xs">{t("Arrastrá los elementos para ordenarlos.")}</p>}
+      {!showHtml && <div className={layout === "grid" ? "folder-grid" : "list"}>
         {items.map((n) => (
           <button
             key={n.path}
@@ -302,7 +378,7 @@ export function FolderView({ path }: { path: string }) {
           </button>
         ))}
         {data && !items.length && <p className="muted">{t("Vacía")}</p>}
-      </div>
+      </div>}
     </div>
   );
 }

@@ -77,7 +77,8 @@
 <li><kbd>/</kbd> abre el menú de bloques: texto, títulos (del 1 al 4), listas, tareas, citas, notas destacadas, desplegables y títulos desplegables, columnas, código, tablas, separadores, enlaces, archivos, la fecha, plantillas y la IA.</li>
 <li>Plantillas: en Ajustes → Plantillas elegís la predeterminada para cada página nueva, creás las tuyas o guardás la página abierta como plantilla.</li>
 <li>El atajo Markdown también funciona mientras escribís: <code>#</code>, <code>-</code>, <code>1.</code>, <code>[ ]</code>, <code>&gt;</code>, <code>```</code> y <code>---</code>.</li>
-<li>Pasá el mouse a la izquierda de un bloque: <b>+</b> inserta uno debajo y <b>⋮⋮</b> lo arrastra o abre su menú (convertir, duplicar, copiar como Markdown, preguntarle a la IA, borrar).</li>
+<li><kbd>/</kbd> → <i>Página</i> (o <code>/page</code>) crea una página nueva junto a esta, la enlaza acá y la abre para que escribas el título.</li>
+<li>Pasá el mouse a la izquierda de un bloque: <b>+</b> inserta uno debajo (con <kbd>⇧</kbd> o <kbd>⌥</kbd>, arriba) y <b>⋮⋮</b> lo arrastra o abre su menú (convertir, duplicar, copiar como Markdown, preguntarle a la IA, borrar).</li>
 <li>Seleccioná texto para la barra de formato: negrita, cursiva, tachado, código, resaltado, enlace, convertir en otro bloque y acciones de IA.</li>
 <li>Pegar texto Markdown lo convierte en bloques. Pegar o soltar archivos los adjunta.</li>
 <li>Las <b>propiedades</b> (arriba de la página) son el frontmatter YAML: texto, número, fecha, casilla o lista (como <code>tags</code>).</li>
@@ -110,11 +111,11 @@
 </table>
 
 <h2 id="files">Archivos</h2>
-<p>Arrastrá archivos a una página (o usá <kbd>/</kbd> → Archivo o imagen): se copian a una carpeta <code>attachments</code> junto a la página y quedan como un bloque. Al tocarlo se abre la vista previa al costado; el botón de las esquinas la pasa a una ventana flotante que se puede mover y agrandar.</p>
+<p>Arrastrá archivos a una página (o usá <kbd>/</kbd> → Archivo o imagen): se copian a una carpeta <code>attachments</code> junto a la página y quedan como un bloque. Al tocarlo se abre la vista previa al costado; el botón de las esquinas la pasa a una ventana flotante que se puede mover y agrandar. Arrastrá el borde izquierdo del panel para hacerlo más ancho o más angosto (doble clic lo vuelve al original); el chat de IA y el historial también se agrandan así.</p>
 <table>
 <tr><th>Formato</th><th>Cómo se ve</th></tr>
 <tr><td>PDF</td><td>Con el visor propio: páginas al desplazarte, zoom (botones, ajustar al ancho, pellizco o <kbd>⌘</kbd>+rueda), ir a una página y texto seleccionable</td></tr>
-<tr><td>Word (.docx)</td><td>Como documento: títulos, negritas, listas y tablas</td></tr>
+<tr><td>Word (.docx)</td><td>Como documento, con las páginas donde Word las cortó: títulos, negritas, listas y tablas</td></tr>
 <tr><td>Excel (.xlsx, .xls, .ods), CSV</td><td>En el editor de planillas, con fórmulas y pestañas por hoja (.xls y .ods, solo lectura)</td></tr>
 <tr><td>HTML</td><td>Como artefacto: la página funcionando o su código</td></tr>
 <tr><td>PowerPoint (.pptx)</td><td>Como diapositivas con título y texto</td></tr>
@@ -141,6 +142,8 @@
 <li><b>Barra flotante:</b> con la barra oculta (<kbd>⌘\</kbd>), llevá el mouse al borde izquierdo de la ventana y aparece encima de la página; se va cuando sacás el mouse. Su botón la vuelve a fijar.</li>
 <li><b>Carpetas:</b> clic en el nombre (se subraya) para abrirla: su propia página si tiene una con el mismo nombre (así llegan las páginas con subpáginas de Notion) o la vista de carpeta. Clic en el resto de la fila para desplegarla. En el menú del clic derecho, <i>Abrir</i> va primero.</li>
 <li><b>Vista de carpeta:</b> ordená por nombre, última edición o tipo (ascendente o descendente) o a mano, arrastrando los elementos; elegí lista o cuadrícula. Se guarda por carpeta.</li>
+<li><b>Página HTML de la carpeta:</b> en la vista de carpeta, <i>Página HTML</i> elige un <code>.html</code> de la carpeta (o crea un artefacto nuevo) y la carpeta se abre mostrando esa página; <i>Página</i> / <i>Archivos</i> cambian entre la página y sus archivos.</li>
+<li><b>Pestañas:</b> se activan en Ajustes → General → <i>Pestañas</i>. Cada pestaña tiene su propio atrás y adelante. <kbd>⌘T</kbd> abre una, <kbd>⌘⌥W</kbd> la cierra (<kbd>Ctrl</kbd>+<kbd>W</kbd> en Windows y Linux), <kbd>Ctrl</kbd>+<kbd>Tab</kbd> y <kbd>⌘1</kbd>–<kbd>9</kbd> cambian de pestaña, y <kbd>⌘</kbd>+clic (o clic con la rueda) en la barra lateral abre una página en una pestaña nueva. Se arrastran para ordenarlas y quedan abiertas para la próxima vez.</li>
 </ul>
 
 <h2 id="databases">Bases de datos</h2>
@@ -230,6 +233,8 @@ codex mcp add openblocks -- openblocks mcp
 <tr><td><kbd>⌘⇧H</kbd></td><td>Resaltar</td></tr>
 <tr><td><kbd>⌘⌥1</kbd>–<kbd>4</kbd></td><td>Títulos</td></tr>
 <tr><td><kbd>⌘+</kbd> / <kbd>⌘−</kbd> / <kbd>⌘0</kbd></td><td>Tamaño de la interfaz</td></tr>
+<tr><td><kbd>⌘T</kbd> / <kbd>⌘⌥W</kbd></td><td>Pestaña nueva / cerrar la pestaña (con las pestañas activadas)</td></tr>
+<tr><td><kbd>Ctrl</kbd>+<kbd>Tab</kbd>, <kbd>⌘1</kbd>–<kbd>9</kbd></td><td>Cambiar de pestaña</td></tr>
 <tr><td><kbd>⌘F</kbd></td><td>Buscar en la página</td></tr>
 <tr><td><kbd>⌘⌥F</kbd> (<kbd>Ctrl</kbd>+<kbd>H</kbd>)</td><td>Buscar y reemplazar</td></tr>
 </table>
@@ -257,7 +262,7 @@ codex mcp add openblocks -- openblocks mcp
 <li><b>No aparece ningún modelo:</b> abrí Ollama o LM Studio, o instalá Claude Code o Codex, y tocá “Volver a buscar modelos” en el selector.</li>
 <li><b>El puerto 47880 está ocupado:</b> OpenBlocks usa otro libre solo. Con <code>openblocks serve --port 48000</code> elegís uno.</li>
 <li><b>“La página cambió afuera”:</b> otro programa la editó mientras escribías. Elegí “Usar la del disco” o seguí escribiendo para quedarte con tu versión (la otra queda en el historial).</li>
-<li><b>Un PDF se ve como un recuadro gris:</b> pasaba hasta la 0.1.2. Desde la 0.1.3 OpenBlocks dibuja los PDF con su propio visor.</li>
+<li><b>Un PDF se ve como un recuadro gris:</b> pasaba hasta la 0.1.2. Desde la 0.1.3 OpenBlocks dibuja los PDF con su propio visor; en la 0.1.4 se arregló que a veces quedara en blanco o temblando.</li>
 <li><b>Un enlace crea una página nueva en vez de abrir la que existe:</b> pasaba en la 0.1.1 con carpetas grandes (como una importación de Notion). Actualizá a la 0.1.2: el índice ya no pierde páginas y la búsqueda y el grafo vuelven a verlas.</li>
 <li><b>macOS pide acceso a un disco externo:</b> si tu vault está en un USB o disco externo, macOS pregunta una vez. Si dijiste que no, activalo en Configuración del Sistema → Privacidad y seguridad → Archivos y carpetas → OpenBlocks → Volúmenes extraíbles.</li>
 <li><b>Linux sin FUSE:</b> el comando <code>openblocks</code> corre la AppImage extraída automáticamente.</li>
@@ -279,7 +284,8 @@ codex mcp add openblocks -- openblocks mcp
 <li><kbd>/</kbd> opens the block menu: text, headings (1 to 4), lists, tasks, quotes, callouts, toggles and toggle headings, columns, code, tables, dividers, links, files, today's date, templates and AI.</li>
 <li>Templates: in Settings → Templates pick the default for every new page, create your own, or save the open page as a template.</li>
 <li>Markdown shortcuts work as you type: <code>#</code>, <code>-</code>, <code>1.</code>, <code>[ ]</code>, <code>&gt;</code>, <code>```</code>, <code>---</code>.</li>
-<li>Hover left of a block: <b>+</b> inserts one below; <b>⋮⋮</b> drags it or opens its menu.</li>
+<li><kbd>/</kbd> → <i>Page</i> (or <code>/page</code>) makes a new page next to this one, links it here and opens it with its title ready to type.</li>
+<li>Hover left of a block: <b>+</b> inserts one below (with <kbd>⇧</kbd> or <kbd>⌥</kbd>, above); <b>⋮⋮</b> drags it or opens its menu.</li>
 <li>Select text for the format bar and the AI actions. Pasting Markdown turns into blocks; pasting or dropping files attaches them.</li>
 <li><b>Properties</b> at the top are the YAML frontmatter: text, number, date, checkbox or list.</li>
 <li>It saves itself 0.7 s after you stop typing, and warns instead of overwriting when another program changed the page.</li>
@@ -290,12 +296,13 @@ codex mcp add openblocks -- openblocks mcp
 <h2 id="markdown-en">Markdown format</h2>
 <p><code>[[Page]]</code>, <code>![[file.pdf]]</code>, <code>&gt; [!warning] Title</code>, <code>&lt;details&gt;</code>, <code>- [ ]</code>, <code>==highlight==</code>, <code>#tag</code> — the same as Obsidian. Toggle headings are <code>&lt;details data-heading="2"&gt;</code>; columns are a <code>&lt;div class="ob-columns"&gt;</code> with one <code>&lt;div class="ob-column"&gt;</code> per column (Markdown inside); <code>![[panel.html|420]]</code> embeds an artifact 420 px tall.</p>
 <h2 id="files-en">Files</h2>
-<p>Drop files on a page: they are copied to an <code>attachments</code> folder next to it. Click one for the side preview, or pop it into a floating window. PDF, Word, Excel/CSV, PowerPoint, images, audio, video, Markdown and code all preview locally, with no internet. PDFs open in OpenBlocks' own viewer (zoom, fit to width, go to page, selectable text).</p>
+<p>Drop files on a page: they are copied to an <code>attachments</code> folder next to it. Click one for the side preview (drag its left edge to resize it; double-click resets), or pop it into a floating window. Word documents show Word's own pages. PDF, Word, Excel/CSV, PowerPoint, images, audio, video, Markdown and code all preview locally, with no internet. PDFs open in OpenBlocks' own viewer (zoom, fit to width, go to page, selectable text).</p>
 <h2 id="artifacts-en">HTML artifacts and spreadsheets</h2>
 <p>An <b>artifact</b> is an HTML page (with its CSS and JavaScript) kept in the vault and shown running inside OpenBlocks, like Claude's artifacts. Create one from the sidebar (folder button → New HTML artifact), a folder's menu or <kbd>⌘K</kbd>, or ask the AI. A toggle switches between <b>View</b> and <b>Code</b> (syntax colors, line numbers, <kbd>⌘S</kbd>). <b>Data</b> links spreadsheets; the page reads them with <code>openblocks.table()</code> (rows keyed by the header row), <code>openblocks.rows()</code>, <code>openblocks.sheets()</code> and <code>openblocks.files</code>, and updates when they change; the link is a <code>&lt;meta name="openblocks-data"&gt;</code> tag in the file. <code>![[panel.html]]</code> embeds it in a page (drag the bottom edge for height). Agents have <code>write_artifact</code> and <code>write_spreadsheet</code>. Artifacts are sandboxed: no access to the app, the vault or the network; libraries load only from jsDelivr, cdnjs, unpkg and esm.sh.</p>
 <p><b>Spreadsheet editor:</b> <code>.xlsx</code>, <code>.csv</code> and <code>.tsv</code> open in an editor — type in cells, move with <kbd>↵</kbd>/<kbd>Tab</kbd>/arrows, select ranges with <kbd>⇧</kbd>, copy and paste with other spreadsheets, <kbd>⌘Z</kbd>, rows/columns/sheets from the headers and tabs. Formulas with <code>=</code> (references, ranges, arithmetic, SUM, AVERAGE, IF, ROUND, COUNT, MIN, MAX… also in Spanish) are computed as you type and saved as real formulas in the <code>.xlsx</code>. Values and formulas are kept, cell formatting is not. Saved automatically; <code>.xls</code>/<code>.ods</code> open read-only.</p>
 <h2 id="sidebar-en">Sidebar and folders</h2>
-<p>Drag the sidebar's edge to resize it (double-click resets). When it is hidden, move the mouse to the window's left edge and it floats over the page. Click a folder's name to open it — its own same-named page (how Notion pages with subpages arrive) or the folder view — and the rest of the row to expand it; <i>Open</i> leads the right-click menu. The folder view sorts by name, last edit, type or by hand (drag), as a list or a grid, saved per folder.</p>
+<p>Drag the sidebar's edge to resize it (double-click resets). When it is hidden, move the mouse to the window's left edge and it floats over the page. Click a folder's name to open it — its own same-named page (how Notion pages with subpages arrive) or the folder view — and the rest of the row to expand it; <i>Open</i> leads the right-click menu. The folder view sorts by name, last edit, type or by hand (drag), as a list or a grid, saved per folder. <i>HTML page</i> in a folder's view picks an <code>.html</code> from it (or makes a new artifact) and the folder opens on that page, with <i>Page</i> / <i>Files</i> to switch.</p>
+<p><b>Tabs:</b> turn them on in Settings → General → <i>Tabs</i>. Each tab has its own back and forward. <kbd>⌘T</kbd> opens one, <kbd>⌘⌥W</kbd> closes it (<kbd>Ctrl</kbd>+<kbd>W</kbd> on Windows and Linux), <kbd>Ctrl</kbd>+<kbd>Tab</kbd> and <kbd>⌘1</kbd>–<kbd>9</kbd> switch, and <kbd>⌘</kbd>-click or middle-click in the sidebar opens a page in a new tab. Drag tabs to reorder them; they stay open for next time.</p>
 <h2 id="look-en">Appearance</h2>
 <p>Settings → <b>Appearance</b>: theme, palette (warm, neutral, sepia, high contrast — light and dark), accent color, fonts for page text (Source Sans, system, serif, mono or any installed font), headings and interface, text size, line spacing, page width (normal, wide, full) and the size of the whole interface (also <kbd>⌘+</kbd>, <kbd>⌘−</kbd>, <kbd>⌘0</kbd>).</p>
 <h2 id="databases-en">Databases</h2>

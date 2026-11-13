@@ -25,7 +25,7 @@ import {
   FolderOpen as FolderNotchOpen,
 } from "@phosphor-icons/react";
 import { api, dirOf, stem, type TreeNode } from "../lib/api";
-import { mod, setSidebar, setSidebarWidth, useStore } from "../lib/store";
+import { mod, routeFor, setSidebar, setSidebarWidth, useStore } from "../lib/store";
 import { t } from "../lib/i18n";
 import { FileIcon } from "./FileIcon";
 import { openMenu, openMenuAt, type MenuItem } from "./Menu";
@@ -343,6 +343,8 @@ function TreeItem({ n, siblings, depth, over, setOver, dropOn }: { n: TreeNode; 
   const menu = (e: React.MouseEvent) => {
     const fav = st.favorites.includes(n.path);
     const items: MenuItem[] = [{ label: t("Abrir"), icon: ArrowSquareOut, run: open }];
+    const tabRoute = routeFor(n.path, n.kind);
+    if (st.settings?.tabs && tabRoute) items.push({ label: t("Abrir en una pestaña nueva"), icon: Plus, hint: `${mod}+clic`, run: () => st.newTab(tabRoute) });
     if (n.kind === "folder") items.push({ label: collapsed ? t("Desplegar") : t("Plegar"), icon: CaretRight, run: toggle });
     items.push({ sep: true });
     if (n.kind === "folder") {
@@ -423,13 +425,23 @@ function TreeItem({ n, siblings, depth, over, setOver, dropOn }: { n: TreeNode; 
           e.stopPropagation();
           dropOn(e, n.path);
         }}
-        onClick={() => {
+        onClick={(e) => {
           if (renaming) return;
+          // ⌘/Ctrl-click opens it in a tab behind this one.
+          if ((e.metaKey || e.ctrlKey) && st.settings?.tabs) {
+            const r = routeFor(n.path, n.kind);
+            if (r) return st.newTab(r, true);
+          }
           // The row expands or collapses a folder; its name opens it.
           if (n.kind === "folder") toggle();
           else open();
         }}
         onContextMenu={menu}
+        onAuxClick={(e) => {
+          if (e.button !== 1 || !st.settings?.tabs) return;
+          const r = routeFor(n.path, n.kind);
+          if (r) (e.preventDefault(), st.newTab(r, true));
+        }}
         role="treeitem"
         aria-expanded={n.kind === "folder" ? !collapsed : undefined}
       >

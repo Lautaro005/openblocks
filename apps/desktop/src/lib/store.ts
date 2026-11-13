@@ -13,6 +13,9 @@ export type Route =
   | { kind: "trash" }
   | { kind: "tag"; tag: string };
 
+/** A tab: its page and its own back/forward history. The active tab's live in `route`, `back`, `forward`. */
+export type Tab = { id: number; route: Route; back: Route[]; forward: Route[] };
+
 export type Panel = null | { kind: "ai" } | { kind: "preview"; path: string } | { kind: "history"; path: string };
 
 type Toast = { id: number; text: string; kind: "info" | "error" | "ok"; action?: { label: string; run: () => void } };
@@ -31,6 +34,8 @@ type State = {
   back: Route[];
   forward: Route[];
   panel: Panel;
+  tabs: Tab[];
+  tabIdx: number;
   floating: string | null;
   palette: null | "all" | "pages";
   settingsTab: string | null;
@@ -38,6 +43,8 @@ type State = {
   /** The sidebar shown over the page while it is hidden (mouse on the left edge). */
   peek: boolean;
   sideWidth: number;
+  /** Widths of the right panels (preview, AI, history), dragged by their left edge. */
+  panelW: Record<string, number>;
   toasts: Toast[];
   models: Model[];
   /** Bumped when files change on disk, with which ones. */
@@ -53,6 +60,10 @@ type State = {
   go(r: Route, opts?: { replace?: boolean }): void;
   goBack(): void;
   goForward(): void;
+  /** A new tab (Home when no route is given), made active unless `background`. */
+  newTab(r?: Route, background?: boolean): void;
+  switchTab(i: number): void;
+  closeTab(i: number): void;
   openPath(path: string, kind?: string): void;
   newPage(folder?: string, title?: string, template?: string): Promise<string | null>;
   daily(): Promise<void>;
@@ -80,6 +91,20 @@ function pagesOf(tree: TreeNode[], out: TreeNode[] = []) {
 }
 
 let toastId = 0;
+let tabId = 1;
+
+/** The tabs with the active one's current route and history written in. */
+function snapshot(): Tab[] {
+  const s = useStore.getState();
+  return s.tabs.map((x, i) => (i === s.tabIdx ? { ...x, route: s.route, back: s.back.slice(-30), forward: s.forward.slice(0, 30) } : x));
+}
+
+function saveTabs() {
+  const s = useStore.getState();
+  const v = s.status?.vault?.path;
+  if (!v || !s.settings?.tabs) return;
+  LS.set("ob-tabs:" + v, JSON.stringify({ tabs: snapshot().map((x) => ({ ...x, back: x.back.slice(-10), forward: x.forward.slice(0, 10) })), idx: s.tabIdx }));
+}
 
 function namesOf(tree: TreeNode[], out = new Set<string>()) {
   for (const n of tree) {
@@ -133,12 +158,21 @@ export const useStore = create<State>((set, get) => ({
   back: [],
   forward: [],
   panel: null,
+  tabs: [{ id: 1, route: { kind: "home" }, back: [], forward: [] }],
+  tabIdx: 0,
   floating: null,
   palette: null,
   settingsTab: null,
   sidebar: LS.get("ob-sidebar") !== "0",
   peek: false,
   sideWidth: Math.min(480, Math.max(200, Number(LS.get("ob-side-w")) || 264)),
+  panelW: (() => {
+    try {
+      return JSON.parse(LS.get("ob-panel-w") || "{}");
+    } catch {
+      return {};
+    }
+  })(),
   toasts: [],
   models: [],
   external: { n: 0, paths: [] },
@@ -155,14 +189,29 @@ export const useStore = create<State>((set, get) => ({
     set({ status, settings, lang });
     if (status.vault) {
       await get().refreshTree();
+      const ok = (r: Route) => (r.kind !== "page" && r.kind !== "file") || get().names.has(r.path.toLowerCase().replace(/\.md$/, ""));
       const last = LS.get("ob-route:" + status.vault.path);
       if (last) {
         try {
           const r = JSON.parse(last) as Route;
-          if ((r.kind !== "page" && r.kind !== "file") || get().names.has(r.path.toLowerCase().replace(/\.md$/, ""))) set({ route: r });
+          if (ok(r)) set({ route: r });
+        } catch {}
+      }
+      if (settings.tabs) {
+        try {
+          const saved = JSON.parse(LS.get("ob-tabs:" + status.vault.path) || "null");
+          const tabs: Tab[] = (saved?.tabs ?? []).filter((x: Tab) => x?.route && ok(x.route)).slice(0, 30);
+          if (tabs.length) {
+            const idx = Math.min(Math.max(0, saved.idx ?? 0), tabs.length - 1);
+            tabId = Math.max(...tabs.map((x) => x.id));
+            set({ tabs, tabIdx: idx, route: tabs[idx].route, back: tabs[idx].back ?? [], forward: tabs[idx].forward ?? [] });
+          }
         } catch {}
       }
     }
+    useStore.subscribe((s, prev) => {
+      if (s.route !== prev.route || s.tabs !== prev.tabs || s.tabIdx !== prev.tabIdx) saveTabs();
+    });
     set({ ready: true });
     // Live updates from the server (files changed on disk, another vault opened).
     const es = new EventSource("/api/events");
@@ -211,6 +260,40 @@ export const useStore = create<State>((set, get) => ({
     }));
     const v = get().status?.vault?.path;
     if (v) LS.set("ob-route:" + v, JSON.stringify(r));
+  },
+  newTab(r, background) {
+    const s = get();
+    const tabs = snapshot();
+    const tab: Tab = { id: ++tabId, route: r ?? { kind: "home" }, back: [], forward: [] };
+    const at = s.tabIdx + 1;
+    tabs.splice(at, 0, tab);
+    if (background) set({ tabs, tabIdx: s.tabIdx });
+    else set({ tabs, tabIdx: at, route: tab.route, back: [], forward: [], renaming: null });
+  },
+  switchTab(i) {
+    const s = get();
+    if (i === s.tabIdx || !s.tabs[i]) return;
+    const tabs = snapshot();
+    const tab = tabs[i];
+    set({ tabs, tabIdx: i, route: tab.route, back: tab.back, forward: tab.forward, renaming: null });
+  },
+  closeTab(i) {
+    const s = get();
+    const tabs = snapshot();
+    if (tabs.length <= 1) {
+      // The last tab goes back to Home instead of leaving no page.
+      tabs[0] = { id: ++tabId, route: { kind: "home" }, back: [], forward: [] };
+      set({ tabs, tabIdx: 0, route: tabs[0].route, back: [], forward: [] });
+      return;
+    }
+    tabs.splice(i, 1);
+    if (i !== s.tabIdx) {
+      set({ tabs, tabIdx: s.tabIdx > i ? s.tabIdx - 1 : s.tabIdx });
+      return;
+    }
+    const idx = Math.min(i, tabs.length - 1);
+    const tab = tabs[idx];
+    set({ tabs, tabIdx: idx, route: tab.route, back: tab.back, forward: tab.forward, renaming: null });
   },
   goBack() {
     const { back, route } = get();
@@ -322,10 +405,28 @@ export const useStore = create<State>((set, get) => ({
   },
 }));
 
+/** Where a path opens in the whole page, or null for files that open in the side panel. */
+export function routeFor(path: string, kind?: string): Route | null {
+  const k = kind ?? (/\.(md|markdown)$/i.test(path) ? "page" : "file");
+  if (k === "page") return { kind: "page", path };
+  if (k === "folder") return { kind: "folder", path };
+  if (/\.(html?|xlsx|xlsm|xls|ods|csv|tsv)$/i.test(path)) return { kind: "file", path };
+  return null;
+}
+
 export function setSidebarWidth(w: number, save = true) {
   const width = Math.round(Math.min(480, Math.max(200, w)));
   if (save) LS.set("ob-side-w", String(width));
   useStore.setState({ sideWidth: width });
+}
+
+export const PANEL_MIN = 300;
+export function setPanelWidth(kind: string, w: number | null, save = true) {
+  const panelW = { ...useStore.getState().panelW };
+  if (w == null) delete panelW[kind];
+  else panelW[kind] = Math.round(Math.max(PANEL_MIN, Math.min(window.innerWidth - 360, w)));
+  if (save) LS.set("ob-panel-w", JSON.stringify(panelW));
+  useStore.setState({ panelW });
 }
 
 export function setSidebar(open: boolean) {

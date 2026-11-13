@@ -2,6 +2,36 @@
 
 All notable changes to OpenBlocks. Dates are YYYY-MM-DD.
 
+## [0.1.4] — 2026-11-13
+
+### New
+- **Tabs** (Settings → General → *Tabs*, off by default): several pages open at once above the page, each with its
+  own back/forward history. `⌘T` opens one, `⌘⌥W` closes it (`Ctrl+W` on Windows and Linux), `Ctrl+Tab` and `⌘1–9`
+  move between them, `⌘`/`Ctrl`-click or middle-click in the sidebar opens a page in a tab behind, and tabs can be
+  dragged to reorder. They stay open when you come back.
+- **A folder can show an HTML page.** In a folder's view, *HTML page* picks an `.html` file from it (or makes a new
+  artifact) and the folder opens on that page, with *Page* / *Files* to switch to its files.
+- **`/page`** makes a new page next to this one, links it here and opens it with its title ready to type.
+- **The right panel can be resized:** drag the left edge of the file preview (PDF, HTML, docx…), the AI chat or the
+  history; double-click goes back to the original width. Each panel keeps its own width.
+- **Shift-click on `+`** (beside a block) inserts the new block above instead of below (`⌥`/`Alt`-click too).
+- **.docx previews keep Word's pages:** the document is split where Word last broke its pages (and at page breaks),
+  one sheet per page.
+
+### Fixed
+- **Selecting several blocks with the rectangle was jumpy** while dragging and only looked right after letting go.
+  The blocks under it are now shown selected as you drag, smoothly, also on long pages.
+- **The "Type '/'…" hint repeated on empty lines** when moving down through them with the arrow keys. It now shows
+  only on the line with the cursor.
+- **The PDF viewer sometimes stayed blank or shook** when opening a file: a page drawn twice at once on the same canvas
+  stayed empty, and a scroll bar coming and going made the fit-to-width zoom go back and forth. Big PDFs also show
+  right away instead of after reading every page, and pages wider than the panel scroll to their left edge.
+- **.docx previews showed one page and the text ran out of it.** Long documents, text files, Markdown, images and
+  slides now scroll inside the preview as they should.
+- **The "link to a page" menu (`[[`) was cramped:** it is wider, with smaller text and full page names.
+- Typing right after pressing Enter in a new page's title could lose the text ("Untitled.md doesn't exist"); the text
+  now waits for the rename.
+
 ## [0.1.3] — 2026-11-09
 
 ### HTML artifacts

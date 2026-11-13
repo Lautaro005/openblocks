@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { X, ArrowSquareOut, CornersOut, CornersIn, DownloadSimple, FolderOpen, MagnifyingGlassPlus, MagnifyingGlassMinus, ArrowsOutSimple, SidebarSimple } from "@phosphor-icons/react";
 import { api, baseName, extOf, fileUrl, humanSize, isAudio, isHtml, isImage, isSheet, isVideo } from "../lib/api";
-import { useStore } from "../lib/store";
+import { setPanelWidth, useStore } from "../lib/store";
 import { t } from "../lib/i18n";
 import { renderMd } from "../lib/render";
 import { FileIcon } from "./FileIcon";
@@ -79,37 +79,50 @@ function Body({ path }: { path: string }) {
   if (TEXT.test(path)) return text == null ? <Loading /> : <pre className="pv-text">{text}</pre>;
   if (OFFICE.test(path)) {
     if (!data) return <Loading />;
-    if (data.kind === "doc")
-      return (
-        <div className="pv-docx">
-          {data.blocks.map((b: any, i: number) => {
-            if (b.kind === "table")
-              return (
-                <table key={i} className="pv-table">
-                  <tbody>
-                    {b.rows.map((r: string[], j: number) => (
-                      <tr key={j}>
-                        {r.map((c, k) => (
-                          <td key={k}>{c}</td>
-                        ))}
-                      </tr>
+    if (data.kind === "doc") {
+      // Word's own page breaks split the document into sheets, like in Word.
+      const pages: any[][] = [[]];
+      for (const b of data.blocks) {
+        if (b.kind === "page") pages.push([]);
+        else pages[pages.length - 1].push(b);
+      }
+      const block = (b: any, i: number) => {
+        if (b.kind === "table")
+          return (
+            <table key={i} className="pv-table">
+              <tbody>
+                {b.rows.map((r: string[], j: number) => (
+                  <tr key={j}>
+                    {r.map((c, k) => (
+                      <td key={k}>{c}</td>
                     ))}
-                  </tbody>
-                </table>
-              );
-            const content = (b.runs?.length ? b.runs : [{ text: b.text }]).map((r: any, k: number) => (
-              <span key={k} style={{ fontWeight: r.b ? 700 : undefined, fontStyle: r.i ? "italic" : undefined }}>
-                {r.text}
-              </span>
-            ));
-            if (b.kind === "h1") return <h1 key={i}>{content}</h1>;
-            if (b.kind === "h2") return <h2 key={i}>{content}</h2>;
-            if (b.kind === "h3") return <h3 key={i}>{content}</h3>;
-            if (b.kind === "li") return <li key={i}>{content}</li>;
-            return <p key={i}>{b.text.trim() ? content : " "}</p>;
-          })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          );
+        const content = (b.runs?.length ? b.runs : [{ text: b.text }]).map((r: any, k: number) => (
+          <span key={k} style={{ fontWeight: r.b ? 700 : undefined, fontStyle: r.i ? "italic" : undefined }}>
+            {r.text}
+          </span>
+        ));
+        if (b.kind === "h1") return <h1 key={i}>{content}</h1>;
+        if (b.kind === "h2") return <h2 key={i}>{content}</h2>;
+        if (b.kind === "h3") return <h3 key={i}>{content}</h3>;
+        if (b.kind === "li") return <li key={i}>{content}</li>;
+        return <p key={i}>{b.text.trim() ? content : "\u00a0"}</p>;
+      };
+      return (
+        <div className="pv-pages">
+          {pages.map((pg, n) => (
+            <div key={n} className="pv-docx">
+              {pg.map(block)}
+              {pages.length > 1 && <span className="pv-page-n">{n + 1}</span>}
+            </div>
+          ))}
         </div>
       );
+    }
     if (data.kind === "sheets" || data.kind === "table") {
       const sheets = data.kind === "table" ? [{ name: baseName(path), rows: data.rows }] : data.sheets;
       const s = sheets[sheet] ?? { rows: [] };
@@ -250,9 +263,46 @@ function Head({ path, floating, onClose, page = false }: { path: string; floatin
   );
 }
 
-export function PreviewPanel({ path }: { path: string }) {
+/** The left edge of a right panel: drag to change its width, double click for the original one. */
+export function PanelResizer({ kind }: { kind: string }) {
+  const start = (e: React.PointerEvent) => {
+    e.preventDefault();
+    const aside = (e.currentTarget as HTMLElement).parentElement!;
+    const x0 = e.clientX;
+    const w0 = aside.getBoundingClientRect().width;
+    document.body.classList.add("resizing-side");
+    const move = (ev: PointerEvent) => setPanelWidth(kind, w0 - (ev.clientX - x0), false);
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      document.body.classList.remove("resizing-side");
+      setPanelWidth(kind, useStore.getState().panelW[kind] ?? w0);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  };
   return (
-    <aside className="preview-panel">
+    <div
+      className="panel-resize"
+      onPointerDown={start}
+      onDoubleClick={() => setPanelWidth(kind, null)}
+      role="separator"
+      aria-orientation="vertical"
+      title={t("Arrastrá para cambiar el ancho · doble clic para volver al original")}
+    />
+  );
+}
+
+export function panelStyle(kind: string): React.CSSProperties | undefined {
+  const w = useStore.getState().panelW[kind];
+  return w ? { width: w } : undefined;
+}
+
+export function PreviewPanel({ path }: { path: string }) {
+  useStore((s) => s.panelW.preview);
+  return (
+    <aside className="preview-panel" style={panelStyle("preview")}>
+      <PanelResizer kind="preview" />
       <Head path={path} floating={false} onClose={() => useStore.getState().setPanel(null)} />
       <div className="pv-body">
         <Body path={path} />

@@ -105,6 +105,10 @@ export function PageView({ path, onSaveState }: { path: string; onSaveState: (s:
       </div>
     );
   if (!page) return <div className="page-loading" />;
+  if (focusNext === page.path) {
+    focusNext = null;
+    setTimeout(() => ed.current?.focusStart(), 30);
+  }
 
   return (
     <article className="page">
@@ -115,6 +119,9 @@ export function PageView({ path, onSaveState }: { path: string; onSaveState: (s:
     </article>
   );
 }
+
+/** The page whose text gets the cursor when it opens (after Enter in the title renamed it). */
+let focusNext: string | null = null;
 
 function Title({ page, autoFocus, onEnter }: { page: Page; autoFocus: boolean; onEnter: () => void }) {
   const [v, setV] = useState(page.title);
@@ -132,16 +139,23 @@ function Title({ page, autoFocus, onEnter }: { page: Page; autoFocus: boolean; o
       ref.current?.select();
     }
   }, [autoFocus]);
+  const entering = useRef(false);
   const commit = async () => {
     const name = v.trim().replace(/[\\/:*?"<>|#^[\]]/g, "-");
+    const enter = entering.current;
+    entering.current = false;
     useStore.setState({ renaming: null });
     if (!name || name === page.title) {
       setV(page.title);
+      if (enter) setTimeout(onEnter, 30);
       return;
     }
+    // Renaming reopens the page under its new name: the text gets the cursor once it has, so
+    // what's typed right after Enter isn't saved to the old name and lost.
     const dir = dirOf(page.path);
     try {
       const r = await api.move(page.path, (dir ? dir + "/" : "") + name);
+      if (enter) focusNext = r.path;
       const st = useStore.getState();
       await st.refreshTree();
       st.go({ kind: "page", path: r.path }, { replace: true });
@@ -164,8 +178,8 @@ function Title({ page, autoFocus, onEnter }: { page: Page; autoFocus: boolean; o
       onKeyDown={(e) => {
         if (e.key === "Enter") {
           e.preventDefault();
+          entering.current = true;
           (e.target as HTMLTextAreaElement).blur();
-          setTimeout(onEnter, 30);
         }
         if (e.key === "Escape") {
           setV(page.title);

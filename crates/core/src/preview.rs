@@ -32,6 +32,9 @@ pub fn text_of(path: &Path) -> Result<String> {
     match v["kind"].as_str() {
         Some("doc") => {
             for b in v["blocks"].as_array().into_iter().flatten() {
+                if b["kind"] == "page" {
+                    continue;
+                }
                 if let Some(rows) = b["rows"].as_array() {
                     for r in rows {
                         let cells: Vec<&str> = r
@@ -183,14 +186,33 @@ fn docx(path: &Path) -> Result<Value> {
     let mut table: Option<Vec<Vec<String>>> = None;
     let mut cell: Option<String> = None;
     let mut depth_tbl = 0;
+    // Page breaks: the ones in the text and where Word last laid out each page, so the preview
+    // shows the same pages. `break_before`: the paragraph starts a page; `break_after`: the next does.
+    let mut break_before = false;
+    let mut break_after = false;
+    let mut pending_page = false;
     loop {
-        match r.read_event() {
+        let ev = r.read_event();
+        let empty = matches!(ev, Ok(X::Empty(_)));
+        match ev {
             Ok(X::Start(e)) | Ok(X::Empty(e)) => match local(e.name().as_ref()) {
                 b"p" => {
                     para.clear();
                     runs.clear();
                     style.clear();
                     list = false;
+                    break_before = false;
+                    break_after = false;
+                }
+                b"pageBreakBefore" if depth_tbl == 0 => {
+                    break_before = attr(&e, b"val").is_none_or(|v| v != "0" && v != "false")
+                }
+                b"lastRenderedPageBreak" if depth_tbl == 0 => {
+                    if para.trim().is_empty() {
+                        break_before = true
+                    } else {
+                        break_after = true
+                    }
                 }
                 b"pStyle" => style = attr(&e, b"val").unwrap_or_default(),
                 b"numPr" => list = true,
@@ -200,8 +222,15 @@ fn docx(path: &Path) -> Result<Value> {
                 }
                 b"b" => run_bold = attr(&e, b"val").is_none_or(|v| v != "0" && v != "false"),
                 b"i" => run_italic = attr(&e, b"val").is_none_or(|v| v != "0" && v != "false"),
-                b"t" => in_text = true,
+                b"t" => in_text = !empty,
                 b"tab" => para.push('\t'),
+                b"br" if attr(&e, b"type").as_deref() == Some("page") && depth_tbl == 0 => {
+                    if para.trim().is_empty() {
+                        break_before = true
+                    } else {
+                        break_after = true
+                    }
+                }
                 b"br" => para.push('\n'),
                 b"tbl" => {
                     depth_tbl += 1;
@@ -243,8 +272,18 @@ fn docx(path: &Path) -> Result<Value> {
                         } else {
                             "p"
                         };
+                        if break_before {
+                            pending_page = true;
+                        }
                         if !para.trim().is_empty() || kind == "p" && !blocks.is_empty() {
+                            if pending_page && !blocks.is_empty() {
+                                blocks.push(json!({"kind": "page"}));
+                            }
+                            pending_page = false;
                             blocks.push(json!({"kind": kind, "text": para, "runs": runs}));
+                        }
+                        if break_after {
+                            pending_page = true;
                         }
                     }
                     para.clear();
@@ -261,6 +300,10 @@ fn docx(path: &Path) -> Result<Value> {
                     depth_tbl -= 1;
                     if depth_tbl == 0 {
                         if let Some(t) = table.take() {
+                            if pending_page && !blocks.is_empty() {
+                                blocks.push(json!({"kind": "page"}));
+                            }
+                            pending_page = false;
                             blocks.push(json!({"kind": "table", "rows": t}));
                         }
                     }
@@ -277,7 +320,8 @@ fn docx(path: &Path) -> Result<Value> {
     }
     // Trailing empty paragraphs read as noise.
     while blocks.last().is_some_and(|b| {
-        b["kind"] == "p" && b["text"].as_str().is_some_and(|t| t.trim().is_empty())
+        b["kind"] == "page"
+            || b["kind"] == "p" && b["text"].as_str().is_some_and(|t| t.trim().is_empty())
     }) {
         blocks.pop();
     }
@@ -465,5 +509,27 @@ mod tests {
     fn csv_quotes() {
         let r = super::parse_csv("a,\"b,c\",\"d \"\"e\"\"\"\n1,2,3\n", ',');
         assert_eq!(r, vec![vec!["a", "b,c", "d \"e\""], vec!["1", "2", "3"]]);
+    }
+
+    #[test]
+    fn docx_keeps_its_pages() {
+        use std::io::Write;
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("d.docx");
+        let body = r#"<w:document xmlns:w="w"><w:body>
+<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>Uno</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Texto </w:t></w:r><w:r><w:t/></w:r><w:r><w:instrText> PAGE </w:instrText></w:r></w:p>
+<w:p><w:r><w:lastRenderedPageBreak/><w:t>Dos</w:t></w:r></w:p>
+<w:p><w:r><w:t>Antes</w:t></w:r><w:r><w:br w:type="page"/></w:r></w:p>
+<w:p><w:r><w:t>Tres</w:t></w:r></w:p>
+</w:body></w:document>"#;
+        let mut z = zip::ZipWriter::new(std::fs::File::create(&p).unwrap());
+        z.start_file("word/document.xml", zip::write::SimpleFileOptions::default()).unwrap();
+        z.write_all(body.as_bytes()).unwrap();
+        z.finish().unwrap();
+        let v = super::preview(&p).unwrap();
+        let kinds: Vec<&str> = v["blocks"].as_array().unwrap().iter().map(|b| b["kind"].as_str().unwrap()).collect();
+        assert_eq!(kinds, ["h1", "p", "page", "p", "p", "page", "p"]);
+        assert_eq!(v["blocks"][1]["text"], "Texto ");
     }
 }

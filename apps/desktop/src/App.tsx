@@ -19,9 +19,16 @@ import {
   Robot,
   X,
   Info,
+  Plus,
+  FileText,
+  House,
+  Folder,
+  Graph as GraphIcon,
+  Hash,
+  Table,
 } from "@phosphor-icons/react";
 import { api, dirOf, fileUrl, stem } from "./lib/api";
-import { isMac, setSidebar, useStore } from "./lib/store";
+import { isMac, setSidebar, useStore, type Route } from "./lib/store";
 import { appearanceOf, nextZoom } from "./lib/appearance";
 import { t } from "./lib/i18n";
 import { renderMd } from "./lib/render";
@@ -62,6 +69,17 @@ export function App() {
         if (s.palette) useStore.setState({ palette: null });
         else if (s.floating) useStore.setState({ floating: null });
         return;
+      }
+      const s0 = useStore.getState();
+      if (s0.settings?.tabs && !e.defaultPrevented) {
+        // Tabs: ⌘T new, ⌘⌥W (Ctrl+W off the Mac) close, Ctrl+Tab and ⌘⇧[ / ⌘⇧] to move, ⌘1–9 to jump.
+        const n = s0.tabs.length;
+        if (e.ctrlKey && e.key === "Tab") return (e.preventDefault(), s0.switchTab((s0.tabIdx + (e.shiftKey ? n - 1 : 1)) % n));
+        if (m && !e.altKey && e.key.toLowerCase() === "t" && !e.shiftKey) return (e.preventDefault(), s0.newTab());
+        if (m && e.code === "KeyW" && (isMac ? e.altKey : !e.altKey)) return (e.preventDefault(), s0.closeTab(s0.tabIdx));
+        if (m && e.shiftKey && (e.code === "BracketLeft" || e.code === "BracketRight"))
+          return (e.preventDefault(), s0.switchTab((s0.tabIdx + (e.code === "BracketLeft" ? n - 1 : 1)) % n));
+        if (m && !e.altKey && !e.shiftKey && /^[1-9]$/.test(e.key)) return (e.preventDefault(), s0.switchTab(e.key === "9" ? n - 1 : Number(e.key) - 1));
       }
       if (!m || e.defaultPrevented) return;
       const s = useStore.getState();
@@ -113,6 +131,7 @@ export function App() {
       {!st.sidebar && <SidebarPeek />}
       <main className="main">
         <TopBar save={save} />
+        {st.settings?.tabs && <TabBar />}
         <div className="content" id="content">
           <Suspense fallback={<div className="page-loading" />}>
           {r.kind === "home" && <Home />}
@@ -141,6 +160,78 @@ export function App() {
   );
 }
 
+function routeTitle(r: Route) {
+  return r.kind === "page"
+    ? stem(r.path)
+    : r.kind === "file"
+      ? r.path.split("/").pop()!
+      : r.kind === "folder"
+        ? r.path.split("/").pop() || r.path
+        : r.kind === "graph"
+          ? t("Grafo")
+          : r.kind === "trash"
+            ? t("Papelera")
+            : r.kind === "tag"
+              ? "#" + r.tag
+              : t("Inicio");
+}
+
+function routeIcon(r: Route) {
+  const I = r.kind === "page" ? FileText : r.kind === "folder" ? Folder : r.kind === "file" ? Table : r.kind === "graph" ? GraphIcon : r.kind === "tag" ? Hash : r.kind === "trash" ? Trash : House;
+  return <I size={13} />;
+}
+
+function TabBar() {
+  const st = useStore();
+  const [drag, setDrag] = useState<number | null>(null);
+  const move = (from: number, to: number) => {
+    if (from === to) return;
+    const s = useStore.getState();
+    const tabs = s.tabs.map((x, i) => (i === s.tabIdx ? { ...x, route: s.route, back: s.back, forward: s.forward } : x));
+    const active = tabs[s.tabIdx].id;
+    const [tab] = tabs.splice(from, 1);
+    tabs.splice(to, 0, tab);
+    useStore.setState({ tabs, tabIdx: tabs.findIndex((x) => x.id === active) });
+  };
+  return (
+    <div className="tabbar" role="tablist">
+      {st.tabs.map((tab, i) => {
+        const r = i === st.tabIdx ? st.route : tab.route;
+        return (
+          <div
+            key={tab.id}
+            role="tab"
+            aria-selected={i === st.tabIdx}
+            className={`tab ${i === st.tabIdx ? "on" : ""} ${drag === i ? "dragging" : ""}`}
+            title={r.kind === "page" || r.kind === "file" || r.kind === "folder" ? r.path : routeTitle(r)}
+            draggable
+            onDragStart={(e) => (setDrag(i), (e.dataTransfer.effectAllowed = "move"), e.dataTransfer.setData("application/x-ob-tab", String(i)))}
+            onDragEnd={() => setDrag(null)}
+            onDragOver={(e) => drag != null && e.preventDefault()}
+            onDrop={(e) => (e.preventDefault(), drag != null && move(drag, i), setDrag(null))}
+            onMouseDown={(e) => e.button === 0 && st.switchTab(i)}
+            onAuxClick={(e) => e.button === 1 && (e.preventDefault(), st.closeTab(i))}
+          >
+            {routeIcon(r)}
+            <span className="tab-name">{routeTitle(r)}</span>
+            <button
+              className="tab-x"
+              title={t("Cerrar la pestaña")}
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={() => st.closeTab(i)}
+            >
+              <X size={11} />
+            </button>
+          </div>
+        );
+      })}
+      <button className="btn-icon sm tab-new" title={t("Pestaña nueva") + ` (${isMac ? "⌘" : "Ctrl+"}T)`} onClick={() => st.newTab()}>
+        <Plus size={14} />
+      </button>
+    </div>
+  );
+}
+
 function TopBar({ save }: { save: { s: SaveState; at?: number } }) {
   const st = useStore();
   const r = st.route;
@@ -150,20 +241,7 @@ function TopBar({ save }: { save: { s: SaveState; at?: number } }) {
     : r.kind === "folder" || r.kind === "file"
       ? (r.kind === "file" ? dirOf(r.path) : r.path).split("/").filter(Boolean)
       : [];
-  const title =
-    r.kind === "page"
-      ? stem(r.path)
-      : r.kind === "file"
-        ? r.path.split("/").pop()!
-      : r.kind === "graph"
-        ? t("Grafo")
-        : r.kind === "trash"
-          ? t("Papelera")
-          : r.kind === "tag"
-            ? "#" + r.tag
-            : r.kind === "home"
-              ? t("Inicio")
-              : "";
+  const title = r.kind === "folder" ? "" : routeTitle(r);
   const fav = path ? st.favorites.includes(path) : false;
 
   const more = async (el: HTMLElement) => {

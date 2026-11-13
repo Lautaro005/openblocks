@@ -265,6 +265,19 @@ function General() {
           <PaintBrush size={14} /> {t("Apariencia")}
         </button>
       </Row>
+      <Row label={t("Pestañas")} hint={t("Varias páginas abiertas a la vez, arriba. {m}+clic en la barra lateral abre en una pestaña nueva.", { m: mod })}>
+        <Toggle
+          on={!!s.tabs}
+          onChange={(v) => {
+            if (!v) {
+              // Off: only the page in front stays open.
+              const cur = useStore.getState();
+              useStore.setState({ tabs: [{ id: Date.now(), route: cur.route, back: cur.back, forward: cur.forward }], tabIdx: 0 });
+            }
+            st.saveSettings({ tabs: v });
+          }}
+        />
+      </Row>
       <Row label={t("Corrector ortográfico")}>
         <Toggle on={s.spellcheck !== false} onChange={(v) => st.saveSettings({ spellcheck: v })} />
       </Row>
@@ -1076,6 +1089,8 @@ function Keys() {
     [isMac ? `${mod} ⌥ F` : `${mod} H`, "Buscar y reemplazar"],
     [`${mod} ⌥ 1 · 2 · 3 · 4`, "Títulos"],
     [`${mod} +  ·  ${mod} −  ·  ${mod} 0`, "Tamaño de la interfaz"],
+    [`${mod} T  ·  ${isMac ? "⌘ ⌥ W" : "Ctrl W"}`, "Pestaña nueva · cerrar la pestaña"],
+    [`Ctrl Tab  ·  ${mod} 1…9`, "Cambiar de pestaña"],
     ["Esc", "Cerrar menús y ventanas"],
   ];
   return (

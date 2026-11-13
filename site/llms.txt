@@ -14,6 +14,8 @@
 - Editor: ⌘F / Ctrl+F find and replace (case, whole word, regex); drag a rectangle from the margin to select blocks; up to 4 columns (`<div class="ob-columns">` + `<div class="ob-column">`), toggle headings (`<details data-heading="2">`), headings 1-4
 - HTML artifacts: `.html` files shown running in the app (View/Code toggle), sandboxed (no network except jsDelivr/cdnjs/unpkg/esm.sh CDNs); spreadsheets linked with `<meta name="openblocks-data" content="file.xlsx">` are read with `openblocks.table()`, `openblocks.rows()`, `openblocks.sheets()`; embed with `![[file.html|height]]`
 - Spreadsheets: .xlsx/.csv/.tsv editor with formulas (SUM/SUMA, AVERAGE/PROMEDIO, IF/SI…); PDFs in a built-in pdf.js viewer
+- Tabs: optional (Settings → General → Tabs), ⌘T / ⌘⌥W, Ctrl+Tab, ⌘-click in the sidebar opens in a new tab
+- Folders can open on an HTML page of their own (folder view → HTML page); `/page` makes a linked page; the right panel (preview, AI, history) is resizable
 - Appearance: Settings → Appearance (theme, palette, accent, fonts, text size, line spacing, page width, interface zoom)
 - Sidebar: resizable, floats over the page when hidden; folders open by name and sort by name, date, type or by hand
 - Import from Notion: Settings → Import (integration token or the `.zip` export) into a new vault folder

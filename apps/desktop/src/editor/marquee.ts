@@ -5,7 +5,8 @@ import { Extension, type Editor } from "@tiptap/core";
 import { Plugin, PluginKey, Selection, TextSelection } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 
-type Range = { from: number; to: number } | null;
+/** `picking`: the rectangle is still being dragged (the text selection is not set yet). */
+type Range = { from: number; to: number; picking?: boolean } | null;
 export const blockSelKey = new PluginKey<Range>("obBlockSel");
 
 export const BlockSelection = Extension.create({
@@ -20,7 +21,7 @@ export const BlockSelection = Extension.create({
             const meta = tr.getMeta(blockSelKey) as Range | undefined;
             if (meta !== undefined) return meta;
             // Any other change of selection or content ends the block selection.
-            if (tr.docChanged || tr.selectionSet) return null;
+            if (tr.docChanged || (tr.selectionSet && !old?.picking)) return null;
             return old;
           },
         },
@@ -36,7 +37,7 @@ export const BlockSelection = Extension.create({
           },
           handleKeyDown(view, e) {
             const r = blockSelKey.getState(view.state);
-            if (!r) return false;
+            if (!r || r.picking) return false;
             if (e.key === "Backspace" || e.key === "Delete") {
               const tr = view.state.tr.delete(r.from, r.to).setMeta(blockSelKey, null);
               if (tr.doc.childCount === 0) tr.insert(0, view.state.schema.nodes.paragraph.create());
@@ -73,13 +74,26 @@ export function attachMarquee(editor: Editor, container: HTMLElement): () => voi
   let picked: [number, number] | null = null;
   let scrollTimer = 0;
 
-  const blocks = () => {
-    const out: { from: number; to: number; el: HTMLElement }[] = [];
+  // The blocks' places, measured once when the rectangle starts (in container scroll coordinates):
+  // measuring on every move forced a layout per block and made the drag stutter.
+  let places: { from: number; to: number; top: number; bottom: number }[] = [];
+  const measure = () => {
+    const cr = container.getBoundingClientRect();
+    places = [];
     editor.state.doc.forEach((node, offset) => {
       const el = editor.view.nodeDOM(offset);
-      if (el instanceof HTMLElement) out.push({ from: offset, to: offset + node.nodeSize, el });
+      if (!(el instanceof HTMLElement)) return;
+      const r = el.getBoundingClientRect();
+      places.push({ from: offset, to: offset + node.nodeSize, top: r.top - cr.top + container.scrollTop, bottom: r.bottom - cr.top + container.scrollTop });
     });
-    return out;
+  };
+
+  /** Shows the blocks under the rectangle as selected while dragging, through the editor's decorations
+   * (changing classes on the editor's DOM by hand made ProseMirror redraw those blocks). */
+  const show = (range: [number, number] | null) => {
+    const cur = blockSelKey.getState(editor.state);
+    if (range ? cur?.picking && cur.from === range[0] && cur.to === range[1] : !cur) return;
+    editor.view.dispatch(editor.state.tr.setMeta(blockSelKey, range ? { from: range[0], to: range[1], picking: true } : null));
   };
 
   const update = () => {
@@ -90,23 +104,27 @@ export function attachMarquee(editor: Editor, container: HTMLElement): () => voi
       x2 = Math.max(start.x, last.x);
     const y1 = Math.min(y0, last.y),
       y2 = Math.max(y0, last.y);
-    Object.assign(box.style, { left: `${x1}px`, top: `${y1}px`, width: `${x2 - x1}px`, height: `${y2 - y1}px` });
+    box.style.transform = `translate(${x1}px, ${y1}px)`;
+    box.style.width = `${x2 - x1}px`;
+    box.style.height = `${y2 - y1}px`;
     // Blocks span the text column, so only the vertical overlap matters once the box reaches the column.
-    const col = editor.view.dom.getBoundingClientRect();
-    const reaches = x2 >= col.left - 80 && x1 <= col.right + 80;
+    const reaches = x2 >= colLeft - 80 && x1 <= colRight + 80;
+    const top = y1 - cr.top + container.scrollTop;
+    const bottom = y2 - cr.top + container.scrollTop;
     let a = -1,
       b = -1;
-    for (const bl of blocks()) {
-      const r = bl.el.getBoundingClientRect();
-      const hit = reaches && r.bottom >= y1 && r.top <= y2;
-      bl.el.classList.toggle("ob-block-picking", hit);
-      if (hit) {
-        if (a < 0) a = bl.from;
-        b = bl.to;
+    if (reaches)
+      for (const p of places) {
+        if (p.bottom >= top && p.top <= bottom) {
+          if (a < 0) a = p.from;
+          b = p.to;
+        }
       }
-    }
     picked = a >= 0 ? [a, b] : null;
+    show(picked);
   };
+  let colLeft = 0,
+    colRight = 0;
 
   const autoscroll = () => {
     const cr = container.getBoundingClientRect();
@@ -129,6 +147,10 @@ export function attachMarquee(editor: Editor, container: HTMLElement): () => voi
       const dx = Math.abs(e.clientX - start.x);
       const dy = Math.abs(e.clientY - (start.y - container.scrollTop + cr.top));
       if (dx < 5 && dy < 5) return;
+      measure();
+      const col = editor.view.dom.getBoundingClientRect();
+      colLeft = col.left;
+      colRight = col.right;
       box = document.createElement("div");
       box.className = "ob-marquee";
       document.body.appendChild(box);
@@ -144,11 +166,11 @@ export function attachMarquee(editor: Editor, container: HTMLElement): () => voi
     window.removeEventListener("mouseup", up);
     window.cancelAnimationFrame(scrollTimer);
     document.body.classList.remove("marquee-on");
-    for (const el of editor.view.dom.querySelectorAll(".ob-block-picking")) el.classList.remove("ob-block-picking");
     if (box) {
       box.remove();
       box = null;
       if (picked) selectBlocks(editor, picked[0], picked[1]);
+      else show(null);
     }
     start = null;
     picked = null;

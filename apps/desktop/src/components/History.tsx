@@ -4,6 +4,7 @@ import { api } from "../lib/api";
 import { useStore } from "../lib/store";
 import { t, getLang } from "../lib/i18n";
 import { renderMd } from "../lib/render";
+import { PanelResizer, panelStyle } from "./Preview";
 
 function when(stamp: string) {
   // 20261102T153012
@@ -21,6 +22,7 @@ const REASON: Record<string, [string, any]> = {
 };
 
 export function HistoryPanel({ path }: { path: string }) {
+  useStore((s) => s.panelW.history);
   const [list, setList] = useState<any[] | null>(null);
   const [sel, setSel] = useState<string | null>(null);
   const [body, setBody] = useState("");
@@ -34,7 +36,8 @@ export function HistoryPanel({ path }: { path: string }) {
     api.historyVersion(path, sel).then((v) => setBody(v.body));
   }, [sel, path]);
   return (
-    <aside className="history-panel">
+    <aside className="history-panel" style={panelStyle("history")}>
+      <PanelResizer kind="history" />
       <header className="panel-head">
         <ClockCounterClockwise size={16} />
         <span className="panel-title">{t("Historial")}</span>

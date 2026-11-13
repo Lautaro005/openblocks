@@ -523,6 +523,79 @@ img.brand {
   position: relative;
 }
 
+/* tabs (Settings → General) */
+.tabbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 34px;
+  padding: 0 8px;
+  flex: none;
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tabbar::-webkit-scrollbar {
+  display: none;
+}
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  min-width: 90px;
+  max-width: 200px;
+  flex: 0 1 180px;
+  padding: 0 4px 0 9px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  color: var(--ink-3);
+  cursor: default;
+  user-select: none;
+}
+.tab:hover {
+  background: var(--hover);
+}
+.tab.on {
+  background: var(--active);
+  color: var(--ink);
+  font-weight: 600;
+}
+.tab.dragging {
+  opacity: 0.45;
+}
+.tab svg {
+  flex: none;
+}
+.tab-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tab-x {
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border-radius: 5px;
+  color: var(--ink-4);
+  opacity: 0;
+  flex: none;
+}
+.tab:hover .tab-x,
+.tab.on .tab-x {
+  opacity: 1;
+}
+.tab-x:hover {
+  background: var(--line);
+  color: var(--ink);
+}
+.tab-new {
+  flex: none;
+}
+
 /* sidebar */
 .sidebar {
   width: var(--side-w);
@@ -1686,6 +1759,30 @@ img.brand {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* "[[" and "link to page": long names and their folders have to fit */
+.suggest.suggest-link {
+  width: min(480px, calc(100vw - 24px));
+  max-height: 420px;
+}
+.suggest.suggest-link .suggest-item {
+  height: auto;
+  min-height: 32px;
+  padding: 4px 8px;
+}
+.suggest.suggest-link .suggest-icon {
+  width: 22px;
+  height: 22px;
+}
+.suggest.suggest-link .suggest-title {
+  font-size: 13px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.3;
+}
+.suggest.suggest-link .suggest-hint {
+  font-size: 11px;
+  max-width: 45%;
+}
 .suggest-empty {
   padding: 10px;
   color: var(--ink-4);
@@ -1817,6 +1914,39 @@ img.brand {
 }
 .preview-panel {
   width: min(560px, 44vw);
+}
+.ai-panel,
+.preview-panel,
+.history-panel {
+  position: relative;
+  max-width: calc(100vw - 360px);
+}
+.panel-resize {
+  position: absolute;
+  top: 0;
+  left: -3px;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 6;
+}
+.panel-resize::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 2px;
+  width: 2px;
+  background: transparent;
+  transition: background 0.15s;
+}
+.panel-resize:hover::after,
+body.resizing-side .panel-resize:active::after {
+  background: var(--line-2);
+}
+/* An iframe under the pointer would swallow the drag. */
+body.resizing-side iframe {
+  pointer-events: none;
 }
 @keyframes slide {
   from {
@@ -2437,11 +2567,40 @@ img.brand {
 .pv-doc,
 .pv-docx {
   background: var(--card);
-  margin: 20px;
+  margin: 20px auto;
+  width: calc(100% - 40px);
+  max-width: 820px;
   padding: 40px 44px;
   border-radius: 6px;
   box-shadow: var(--shadow);
   min-height: calc(100% - 40px);
+  overflow-wrap: anywhere;
+}
+.pv-pages {
+  padding: 4px 0;
+}
+.pv-pages > .pv-docx {
+  position: relative;
+  min-height: 0;
+  margin: 16px auto;
+}
+.pv-pages > .pv-docx:only-child {
+  min-height: calc(100% - 40px);
+}
+.pv-page-n {
+  position: absolute;
+  right: 14px;
+  bottom: 8px;
+  font: 11px var(--font);
+  color: var(--ink-4);
+}
+.pv-docx li {
+  margin: 0 0 0.3em 1.2em;
+}
+.pv-docx .pv-table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
 }
 .pv-docx {
   font: 14.5px/1.6 Georgia, "Times New Roman", serif;
@@ -3753,8 +3912,12 @@ img.brand {
   .history-panel {
     position: fixed;
     inset: 0;
-    width: 100%;
+    width: 100% !important;
+    max-width: none;
     z-index: 45;
+  }
+  .panel-resize {
+    display: none;
   }
   .page {
     padding: 16px 20px 100px;
@@ -4276,6 +4439,31 @@ body.resizing-side * {
 }
 
 /* ---------- folder view ---------- */
+.folder-view.with-html {
+  max-width: none;
+  padding: 24px 32px 24px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.folder-view.with-html h1 {
+  max-width: 1100px;
+}
+.folder-html {
+  flex: 1;
+  min-height: 420px;
+  margin-top: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+.folder-html .artifact-frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
 .folder-bar {
   align-items: center;
   flex-wrap: wrap;
@@ -4463,6 +4651,9 @@ body.resizing-side * {
 /* ---------- block selection by rectangle ---------- */
 .ob-marquee {
   position: fixed;
+  left: 0;
+  top: 0;
+  will-change: transform, width, height;
   z-index: 60;
   pointer-events: none;
   border: 1px solid rgba(194, 65, 12, 0.55);
@@ -4474,7 +4665,6 @@ body.marquee-on * {
   user-select: none !important;
   cursor: default;
 }
-.ProseMirror > .ob-block-picking,
 .ProseMirror > .ob-block-selected {
   background: var(--accent-soft);
   border-radius: 4px;
@@ -4549,22 +4739,34 @@ body.marquee-on * {
 }
 .pdf-scroll {
   flex: 1;
+  min-height: 0;
   overflow: auto;
+  /* A scroll bar that comes and goes would change the width the pages fit to. */
+  scrollbar-gutter: stable;
   padding: 20px;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  /* Pages wider than the panel (zoomed in) still scroll to their left edge. */
+  align-items: flex-start;
   gap: 14px;
   background: var(--sunk);
 }
 .pdf-page {
   position: relative;
   flex: none;
+  margin: 0 auto;
   background: #fff;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 4px 16px rgba(0, 0, 0, 0.08);
 }
+.pdf-canvas,
+.pdf-text-wrap {
+  position: absolute;
+  inset: 0;
+}
 .pdf-page canvas {
   display: block;
+  width: 100%;
+  height: 100%;
 }
 .textLayer {
   position: absolute;
@@ -4777,11 +4979,22 @@ body.ob-side-drop .prosemirror-dropcursor-inline {
   display: flex;
   flex-direction: column;
 }
+/* The rest (documents, text, images, slides) keep their own height and the body scrolls: shrunk to
+   the panel's height, a long .docx showed one "page" with the text running out of it. */
+.pv-body > * {
+  flex: none;
+}
 .pv-body > .artifact,
 .pv-body > .sheet-ed,
-.pv-body > .pdf {
+.pv-body > .pdf,
+.pv-body > .pv-sheet,
+.pv-body > .pv-empty,
+.pv-body > .pv-loading {
   flex: 1;
   min-height: 0;
+}
+.pv-body > .pv-media {
+  margin: auto 0;
 }
 
 /* HTML artifacts */

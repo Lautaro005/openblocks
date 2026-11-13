@@ -7,6 +7,8 @@ import { insertColumns } from "./columns";
 export type SlashHooks = {
   attach: (editor: Editor) => void;
   linkPage: (editor: Editor) => void;
+  /** A new page next to this one, linked from here, and opened. */
+  newPage: (editor: Editor) => void;
   ai: (editor: Editor) => void;
   template: (editor: Editor) => void;
 };
@@ -67,6 +69,16 @@ export function slashItems(hooks: SlashHooks) {
       run: (e, r) => del(e, r).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
     },
     { group: "Bloques", title: "Separador", hint: "---", icon: "divider", run: (e, r) => del(e, r).setHorizontalRule().run() },
+    {
+      group: "Insertar",
+      title: "Página",
+      hint: "/page",
+      icon: "newpage",
+      run: (e, r) => {
+        del(e, r).run();
+        hooks.newPage(e);
+      },
+    },
     {
       group: "Insertar",
       title: "Enlace a una página",
@@ -136,6 +148,7 @@ export function slashItems(hooks: SlashHooks) {
     Código: "code codigo snippet",
     Tabla: "table grid",
     Separador: "divider hr line rule",
+    Página: "page new nueva pagina subpage subpagina crear",
     "Enlace a una página": "link page wikilink enlace",
     "Archivo o imagen": "file upload image pdf attach adjuntar imagen archivo",
     "Fecha de hoy": "date today fecha hoy",

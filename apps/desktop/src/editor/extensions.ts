@@ -9,6 +9,43 @@ import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import { create } from "zustand";
 import { EmbedView, CalloutView } from "./NodeViews";
 
+// ---------- placeholder ----------
+
+/** The hint on the empty line under the cursor. TipTap's own placeholder updates its decorations
+ * piece by piece and leaves old ones behind when the cursor moves down through empty lines. */
+export const CursorPlaceholder = Extension.create<{ placeholder: (p: { node: any; editor: Editor; pos: number }) => string }>({
+  name: "placeholder",
+  addOptions() {
+    return { placeholder: () => "" };
+  },
+  addProseMirrorPlugins() {
+    const editor = this.editor;
+    const opts = this.options;
+    return [
+      new Plugin({
+        key: new PluginKey("obPlaceholder"),
+        props: {
+          decorations: (state) => {
+            if (!editor.isEditable) return null;
+            const { $anchor } = state.selection;
+            let d = $anchor.depth;
+            while (d > 0 && !$anchor.node(d).isTextblock) d--;
+            const node = $anchor.node(d);
+            if (d === 0 || !node.isTextblock || node.content.size) return null;
+            const pos = $anchor.before(d);
+            const empty = state.doc.childCount === 1 && d === 1;
+            const text = opts.placeholder({ node, editor, pos });
+            if (!text) return null;
+            return DecorationSet.create(state.doc, [
+              Decoration.node(pos, pos + node.nodeSize, { class: empty ? "is-empty is-editor-empty" : "is-empty", "data-placeholder": text }),
+            ]);
+          },
+        },
+      }),
+    ];
+  },
+});
+
 // ---------- popup store (slash, wikilink and mention menus) ----------
 
 export type SuggestItem = {
